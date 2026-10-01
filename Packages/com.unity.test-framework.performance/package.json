@@ -1,0 +1,7 @@
+{
+  "name": "com.unity.test-framework.performance",
+  "displayName": "Performance testing API",
+  "version": "6.6.0",
+  "description": "stub",
+  "dependencies": {}
+}

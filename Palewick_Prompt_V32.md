@@ -48,6 +48,7 @@ FlashlightSway.cs | FootstepSoundController.cs | GTA6CameraEffects.cs | Heartbea
 JumpButton.cs | LoadingScreenFx.cs | LobbyManager.cs | Minimap.cs | NetworkManager.cs | PauseMenuPUBG.cs
 PlayerHealth.cs | PlayerInteraction.cs | PlayerSetup.cs | PointPickup.cs | PwAds.cs | PwAuthUI.cs
 PwCloud.cs | PwGoogle.cs | PwLanguageUI.cs | PwLocalizer.cs | PwPoints.cs | PwPointsHud.cs | PwStartMode.cs
+PwHorrorSettingsFx.cs | PwPerformance.cs | PwShop.cs | PwShopUI.cs | PwLoadout.cs
 ServerBrowser.cs
 Assets/a.last/Flooded_Grounds/Scripts/: FlashlightController.cs | StaminaSystem.cs | CameraViewSwitcher.cs | FPSController/CharController_Motor.cs
 PwRtl: كلاس static داخل PauseMenuPUBG.cs (PwRtl.Visual لتشكيل العربي/الكردي).
@@ -68,6 +69,8 @@ PwServicesDefines.cs ........... Palewick/Refresh Service Defines (يضيف PW_A
 PwPluginMetaFixer.cs ........... Palewick/Fix Plugin Meta Files (يرقّي ملفات .meta القديمة للبلَكنات)
 BuildWarningsFixer.cs | PreBakeCollisionFixer.cs | HorrorLightingTool.cs | DoorSetupTool.cs | MapCollisionTool.cs
 MarkStaticTool.cs | NavMeshBakerTool.cs | PhotonCrashPreventer.cs | ToggleNavMeshTool.cs
+MobileOptimizationTool.cs ...... Palewick/Optimize Mobile Performance (Canvas Scaler 1920x1080 + إطفاء raycast للنصوص + ASTC للأندرويد)
+MissingMaterialFixer.cs ........ Palewick/Fix Missing Materials (يصلح المواد البيضاء/الشيدرات المكسورة بالمشهد المفتوح)
 أي Editor Tool جديد يحتاج طلباً صريحاً.
 
 ====================================================================
@@ -203,3 +206,15 @@ CameraViewSwitcher: FP Height 1.7 | TP Distance 3.5 | TP Height 1.5 | FP FOV 60 
 3. ربط Google Play Games عند توفر Play Console.
 4. PostProcessing Runtime/Models (مؤجل).
 جهاز المستخدم: Dell Latitude E7240, i5-4310U, 8 GB DDR3, القرص C: ~52 GB مجانية.
+
+====================================================================
+15. تحديث V33 — الرعب والتحسينات الشاملة
+====================================================================
+• الخريطة الكاملة صارت بستايل PUBG التكتيكي: MinimapBuilder يبني FullMapPanel جديد (إطار داكن + هيدر TACTICAL MAP + شبكة Grid عالمية + أزرار زوم/إغلاق أنيقة + Legend + زوايا ذهبية). حقول جديدة بـ Minimap.cs: fullMapGrid و fullMapScaleText (SerializeField). ملف الشبكة: Assets/UI_Icons/map_grid.png (يولده البلدر).
+• إعدادات الرعب الموحدة: PwHorrorSettingsFx.cs ينضاف تلقائياً على PausePanel بالمشهدين (لوبي + Scene_A) — ظلال جانبية، Jumpscare خاطف نادر عند تبديل التبويبات، نبضة Vignette حمراء عند تحريك السلايدرات.
+• الانترو: IntroManager صار بيه flickerGroup + glowTitle (PALEWICK متوهج نابض) + shadowDrift (ظل يمشي)، والانتقال للوبي فيد ناعم 0.6 ثانية. IntroBuilder يبنيها كلها (Palewick/Build Horror Intro). ملف الظل: Assets/UI_Lobby/intro_shadow.png.
+• الأداء: PwPerformance.cs (60 FPS + vSync 0 + ضبط تلقائي للأجهزة الضعيفة بأول تشغيل) + أداة Palewick/Optimize Mobile Performance.
+• المواد المفقودة: أداة Palewick/Fix Missing Materials تصلح المجسمات البيضاء (الأكواخ بـ Scene_A) وتعيد Standard Shader، والاحتياطي بـ Assets/PwFixedMaterials/PwFallbackWood.mat.
+• الأيقونات: كل أيقونات HUD انستبدلت بأيقونات رعب (نفس الملفات/GUIDs بـ Assets/UI_Icons) + أيقونة جديدة hud_crouch.png. المولد: Tools/horror_icons.py.
+• المتجر الجديد: انحذفت ألوان اللاعب نهائياً. الكتالوج: سكنات رعب (Pale Clown / The Butcher / The Wraith / Plague Doctor) + سكنات كشاف (Warm / Cursed / Spectral مع فليكر) + معدات بقاء (Warding Talisman يبطئ الوحش أكثر بالضوء، Adrenaline Shot ستامينا +25%، Lucky Charm فرصة 30% إحياء مجاني). أيقونات جديدة بـ Assets/UI_Lobby/Shop. بعد السحب لازم تشغيل Palewick/Build Shop وحفظ Scene_Lobby.
+• أدوات لازم تنشغل بالإيديتور بعد السحب: Build Shop (لوبي) + Create Minimap In Canvas (حذف MinimapRoot القديم أولاً بـ Scene_A) + Build Horror Intro + Fix Missing Materials + Optimize Mobile Performance.

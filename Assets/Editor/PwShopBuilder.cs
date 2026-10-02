@@ -90,15 +90,15 @@ namespace Palewick.EditorTools
             tabsLayout.childControlHeight = false;
             tabsLayout.childForceExpandWidth = false;
             tabsLayout.childForceExpandHeight = false;
-            string[] tabNames = { "Character", "Gear", "Points" };
+            string[] tabNames = { "Skins", "Flashlights", "Survival", "Points" };
             List<PwShopUI.Section> sections = new List<PwShopUI.Section>();
             for (int t = 0; t < tabNames.Length; t++)
             {
                 PwShopUI.Section section = new PwShopUI.Section();
                 RectTransform tab = Node("Tab" + t, tabsBar);
-                tab.sizeDelta = new Vector2(436f, 74f);
+                tab.sizeDelta = new Vector2(326f, 74f);
                 LayoutElement le = tab.gameObject.AddComponent<LayoutElement>();
-                le.preferredWidth = 436f;
+                le.preferredWidth = 326f;
                 le.preferredHeight = 74f;
                 Image fill = Img(tab.gameObject, Spr("lobby_btn_side.png"), new Color(0.14f, 0.12f, 0.13f, 1f), true);
                 LobbyBuilder.Slice(fill);
@@ -119,10 +119,10 @@ namespace Palewick.EditorTools
                 sections.Add(section);
             }
             ui.sections = sections.ToArray();
-            RectTransform pointsPage = (RectTransform)sections[2].root.transform;
+            RectTransform pointsPage = (RectTransform)sections[3].root.transform;
             pointsPage.offsetMin = new Vector2(60f, 110f);
             pointsPage.offsetMax = new Vector2(-60f, -260f);
-            GridLayoutGroup pointsGrid = sections[2].root.AddComponent<GridLayoutGroup>();
+            GridLayoutGroup pointsGrid = sections[3].root.AddComponent<GridLayoutGroup>();
             pointsGrid.cellSize = new Vector2(390f, 470f);
             pointsGrid.spacing = new Vector2(40f, 40f);
             pointsGrid.startCorner = GridLayoutGroup.Corner.UpperLeft;
@@ -132,15 +132,18 @@ namespace Palewick.EditorTools
             pointsGrid.constraintCount = 4;
             List<PwShopUI.Card> cards = new List<PwShopUI.Card>();
             int[] slot = new int[tabNames.Length];
-            AddCard(cards, sections, slot, 0, 0, 0, 0, 0, -1, "Default Skin", "The normal white look", "Free for everyone", "shop_skin_white", Color.white);
-            AddCard(cards, sections, slot, 0, 0, PwShop.SkinRed, PwShop.PriceRed, 1, -1, "Red Skin", "Blood red clown body", "All players see your color", "shop_skin_red", Color.white);
-            AddCard(cards, sections, slot, 0, 0, PwShop.SkinBlack, PwShop.PriceBlack, 2, -1, "Black Skin", "Dark body for the night", "Harder to spot in the dark", "shop_skin_black", Color.white);
-            AddCard(cards, sections, slot, 0, 0, PwShop.SkinGold, PwShop.PriceGold, 3, -1, "Gold Skin", "Shiny gold body", "The rarest look in the game", "shop_skin_gold", Color.white);
+            AddCard(cards, sections, slot, 0, 0, 0, 0, 0, -1, "Pale Clown", "The classic pale look", "Free for everyone", "shop_skin_default", Color.white);
+            AddCard(cards, sections, slot, 0, 0, PwShop.SkinButcher, PwShop.PriceButcher, 1, -1, "The Butcher", "Blood soaked body", "Stained by old victims", "shop_skin_butcher", Color.white);
+            AddCard(cards, sections, slot, 0, 0, PwShop.SkinWraith, PwShop.PriceWraith, 2, -1, "The Wraith", "Ashen ghost look", "Fades into the fog", "shop_skin_wraith", Color.white);
+            AddCard(cards, sections, slot, 0, 0, PwShop.SkinPlague, PwShop.PricePlague, 3, -1, "Plague Doctor", "Sickly rotten look", "Carries the old plague", "shop_skin_plague", Color.white);
             AddCard(cards, sections, slot, 1, 0, PwShop.FlashUp, PwShop.PriceFlash, -1, -1, "Strong Flashlight", "Light range 45m instead of 30m", "Wider beam and brighter", "shop_flashlight", Color.white);
-            AddCard(cards, sections, slot, 1, 0, 0, 0, -1, 0, "White Light", "Normal warm white beam", "Free for everyone", "shop_flashlight", new Color(1f, 0.96f, 0.88f, 1f));
-            AddCard(cards, sections, slot, 1, 0, PwShop.LampRed, PwShop.PriceLamp, -1, 1, "Red Light", "Blood red beam", "Scary red light in the dark", "shop_flashlight", new Color(1f, 0.42f, 0.36f, 1f));
-            AddCard(cards, sections, slot, 1, 0, PwShop.LampBlue, PwShop.PriceLamp, -1, 2, "Blue Light", "Cold blue beam", "Clear light for dark rooms", "shop_flashlight", new Color(0.5f, 0.72f, 1f, 1f));
-            AddCard(cards, sections, slot, 2, 1, 0, 0, -1, -1, "Watch Ad", "Watch a short video", "Get 1 point every minute", "shop_ad", Color.white);
+            AddCard(cards, sections, slot, 1, 0, 0, 0, -1, 0, "Warm Beam", "The classic warm light", "Free for everyone", "shop_flashlight", Color.white);
+            AddCard(cards, sections, slot, 1, 0, PwShop.LampCursed, PwShop.PriceLamp, -1, 1, "Cursed Beam", "Sickly green flicker", "The light itself feels wrong", "shop_flash_cursed", Color.white);
+            AddCard(cards, sections, slot, 1, 0, PwShop.LampSpectral, PwShop.PriceLamp, -1, 2, "Spectral Beam", "Cold ghostly glow", "Breathes like a dying soul", "shop_flash_spectral", Color.white);
+            AddCard(cards, sections, slot, 2, 0, PwShop.ItemTalisman, PwShop.PriceTalisman, -1, -1, "Warding Talisman", "Your beam burns it harder", "Monster slows more in your light", "shop_item_talisman", Color.white);
+            AddCard(cards, sections, slot, 2, 0, PwShop.ItemAdrenaline, PwShop.PriceAdrenaline, -1, -1, "Adrenaline Shot", "Stamina returns 25% faster", "Keep running in the dark", "shop_item_adrenaline", Color.white);
+            AddCard(cards, sections, slot, 2, 0, PwShop.ItemCharm, PwShop.PriceCharm, -1, -1, "Lucky Charm", "30% chance of a free respawn", "Death does not always collect", "shop_item_charm", Color.white);
+            AddCard(cards, sections, slot, 3, 1, 0, 0, -1, -1, "Watch Ad", "Watch a short video", "Get 1 point every minute", "shop_ad", Color.white);
             ui.cards = cards.ToArray();
             RectTransform msg = Node("ShopMessage", box);
             Place(msg, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(1500f, 56f));

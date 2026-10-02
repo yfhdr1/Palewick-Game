@@ -28,7 +28,14 @@ public class IntroManager : MonoBehaviour
     public Text percentText;
     public Text tipText;
     public RectTransform spinner;
+    public CanvasGroup flickerGroup;
+    public Text glowTitle;
+    public RectTransform shadowDrift;
     public string nextScene = "Scene_Lobby";
+    private Outline glowOutline;
+    private CanvasGroup shadowGroup;
+    private float shadowX = -1100f;
+    private const float FadeOutTime = 0.6f;
     private float t;
     private float frameTime;
     private float frameStall;
@@ -165,6 +172,7 @@ public class IntroManager : MonoBehaviour
     {
         float dt = Time.unscaledDeltaTime;
         t += dt;
+        UpdateHorrorAmbience(dt);
         if (!warningDone)
         {
             UpdateWarning();
@@ -202,6 +210,45 @@ public class IntroManager : MonoBehaviour
         else if (t > 10f)
         {
             SkipNow();
+        }
+    }
+    private void UpdateHorrorAmbience(float dt)
+    {
+        float now = Time.unscaledTime;
+        if (flickerGroup != null)
+        {
+            float n = Mathf.PerlinNoise(now * 7f, 0.37f);
+            float dip = n > 0.82f ? (n - 0.82f) * 3.2f : 0f;
+            flickerGroup.alpha = Mathf.Clamp01(0.08f + dip);
+        }
+        if (glowTitle != null)
+        {
+            if (glowOutline == null) glowOutline = glowTitle.GetComponent<Outline>();
+            float pulse = 0.68f + Mathf.Sin(now * 1.9f) * 0.16f + Mathf.PerlinNoise(now * 5f, 7.3f) * 0.16f;
+            Color c = glowTitle.color;
+            c.a = Mathf.Clamp01(pulse);
+            glowTitle.color = c;
+            if (glowOutline != null)
+            {
+                Color oc = glowOutline.effectColor;
+                oc.a = Mathf.Clamp01(pulse * 0.9f);
+                glowOutline.effectColor = oc;
+                float spread = 3.5f + Mathf.Sin(now * 1.9f) * 1.5f;
+                glowOutline.effectDistance = new Vector2(spread, -spread);
+            }
+        }
+        if (shadowDrift != null)
+        {
+            if (shadowGroup == null)
+            {
+                shadowGroup = shadowDrift.GetComponent<CanvasGroup>();
+                if (shadowGroup == null) shadowGroup = shadowDrift.gameObject.AddComponent<CanvasGroup>();
+            }
+            shadowX += dt * 46f;
+            if (shadowX > 1250f) shadowX = -1250f;
+            shadowDrift.anchoredPosition = new Vector2(shadowX, shadowDrift.anchoredPosition.y + Mathf.Sin(now * 1.3f) * 0.2f);
+            float edge = Mathf.Clamp01((1100f - Mathf.Abs(shadowX)) / 500f);
+            shadowGroup.alpha = edge * (0.16f + Mathf.PerlinNoise(now * 3f, 1.1f) * 0.12f);
         }
     }
     private void UpdateWarning()
@@ -271,9 +318,10 @@ public class IntroManager : MonoBehaviour
         fadeOutTimer += dt;
         if (fadeGroup != null)
         {
-            fadeGroup.alpha = Mathf.Clamp01(fadeOutTimer / 0.35f);
+            float k = Mathf.Clamp01(fadeOutTimer / FadeOutTime);
+            fadeGroup.alpha = k * k * (3f - 2f * k);
         }
-        if (fadeOutTimer >= 0.35f)
+        if (fadeOutTimer >= FadeOutTime)
         {
             activating = true;
             loadOp.allowSceneActivation = true;

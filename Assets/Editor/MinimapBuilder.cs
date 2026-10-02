@@ -80,9 +80,64 @@ namespace Palewick.EditorTools
             mm.markers = markers;
             mm.localArrow = me;
             mm.dotSprite = dot;
+            CreateFullMap(root, mm);
             Undo.RegisterCreatedObjectUndo(root.gameObject, "Create Minimap");
             Selection.activeGameObject = box.gameObject;
             EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
+        }
+        private static void CreateFullMap(RectTransform root, Minimap minimap)
+        {
+            GameObject panelObject = new GameObject("FullMapPanel", typeof(RectTransform), typeof(Image));
+            panelObject.layer = 5;
+            panelObject.transform.SetParent(root, false);
+            RectTransform panel = panelObject.GetComponent<RectTransform>();
+            Stretch(panel);
+            Image dim = panelObject.GetComponent<Image>();
+            dim.color = new Color(0.01f, 0.005f, 0.008f, 0.94f);
+            dim.raycastTarget = true;
+
+            RawImage map = panelObject.transform.Find("FullMap") == null
+                ? NewRect("FullMap", panel).gameObject.AddComponent<RawImage>()
+                : panelObject.transform.Find("FullMap").GetComponent<RawImage>();
+            map.color = new Color(0.72f, 0.68f, 0.62f, 1f);
+            map.raycastTarget = true;
+            map.rectTransform.anchorMin = new Vector2(0.08f, 0.1f);
+            map.rectTransform.anchorMax = new Vector2(0.92f, 0.9f);
+            map.rectTransform.offsetMin = Vector2.zero;
+            map.rectTransform.offsetMax = Vector2.zero;
+
+            RectTransform markers = NewRect("Markers", map.transform);
+            Stretch(markers);
+            Button close = CreateButton(panel, "CloseMap", "X", new Vector2(0.92f, 0.9f), new Vector2(120f, 80f));
+            Button zoomIn = CreateButton(panel, "ZoomIn", "+", new Vector2(0.88f, 0.2f), new Vector2(100f, 80f));
+            Button zoomOut = CreateButton(panel, "ZoomOut", "−", new Vector2(0.88f, 0.1f), new Vector2(100f, 80f));
+            panelObject.SetActive(false);
+            minimap.GetType().GetField("fullMapPanel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, panelObject);
+            minimap.GetType().GetField("fullMapImage", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, map);
+            minimap.GetType().GetField("fullMapMarkers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, markers);
+            minimap.GetType().GetField("closeMapButton", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, close);
+            minimap.GetType().GetField("zoomInButton", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, zoomIn);
+            minimap.GetType().GetField("zoomOutButton", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(minimap, zoomOut);
+        }
+        private static Button CreateButton(RectTransform parent, string name, string label, Vector2 anchor, Vector2 size)
+        {
+            RectTransform rt = NewRect(name, parent);
+            Place(rt, anchor, new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            Image image = rt.gameObject.AddComponent<Image>();
+            image.color = new Color(0.12f, 0.02f, 0.025f, 0.88f);
+            Button button = rt.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.ColorTint;
+            RectTransform labelRect = NewRect("Label", rt);
+            Text text = labelRect.gameObject.AddComponent<Text>();
+            Stretch(labelRect);
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.text = label;
+            text.fontSize = 42;
+            text.color = new Color(0.95f, 0.88f, 0.82f, 1f);
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+            return button;
         }
         private static Canvas FindCanvas()
         {

@@ -116,7 +116,7 @@ namespace Palewick.EditorTools
         private static bool IsBlankStandard(Material material)
         {
             if (material == null || material.shader == null) return false;
-            if (material.shader.name != "Standard" && !material.shader.name.StartsWith("Universal Render Pipeline/Lit")) return false;
+            if (material.shader.name != "Standard") return false;
             if (!material.HasProperty("_MainTex") && !material.HasProperty("_BaseMap")) return false;
             Texture tex = material.HasProperty("_MainTex") ? material.GetTexture("_MainTex") : null;
             if (tex == null && material.HasProperty("_BaseMap")) tex = material.GetTexture("_BaseMap");

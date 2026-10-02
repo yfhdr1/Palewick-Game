@@ -7,9 +7,9 @@ using Photon.Realtime;
 public class Minimap : MonoBehaviour, IPointerClickHandler
 {
     [Header("Full Map")]
-    public float fullMapRange = 220f;
+    public float fullMapRange = 500f;
     public float fullMapMinRange = 25f;
-    public float fullMapMaxRange = 420f;
+    public float fullMapMaxRange = 1000f;
     public bool showMonsterMarkers = true;
     [SerializeField] private GameObject fullMapPanel;
     [SerializeField] private RawImage fullMapImage;
@@ -149,9 +149,9 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         mapCamera.orthographicSize = range;
         mapCamera.clearFlags = CameraClearFlags.SolidColor;
         mapCamera.backgroundColor = new Color(0.035f, 0.075f, 0.12f, 1f);
-        mapCamera.cullingMask = ~(1 << 5);
+        mapCamera.cullingMask = ~0;
         mapCamera.nearClipPlane = 0.3f;
-        mapCamera.farClipPlane = height + 120f;
+        mapCamera.farClipPlane = 1000f;
         mapCamera.allowHDR = false;
         mapCamera.allowMSAA = false;
         mapCamera.useOcclusionCulling = false;
@@ -189,7 +189,13 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         Search();
         fullMapOpen = true;
         fullMapPanel.SetActive(true);
-        fullMapZoom = Mathf.Clamp(Mathf.Max(worldBounds.size.x, worldBounds.size.z) * 0.58f, fullMapMinRange, fullMapMaxRange);
+        float maxExtent = Mathf.Max(worldBounds.extents.x, worldBounds.extents.z);
+        float fullCoverage = Mathf.Max(maxExtent * 1.1f, Mathf.Max(worldBounds.size.x, worldBounds.size.z) * 0.55f);
+        if (fullCoverage > fullMapMaxRange)
+        {
+            fullMapMaxRange = fullCoverage * 1.5f;
+        }
+        fullMapZoom = Mathf.Clamp(fullCoverage, fullMapMinRange, fullMapMaxRange);
         mapCenter = worldBounds.center;
         RenderFullMap();
     }
@@ -215,15 +221,53 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
             if (!found) { bounds = r.bounds; found = true; }
             else bounds.Encapsulate(r.bounds);
         }
+
+        Terrain[] terrains = Terrain.activeTerrains != null && Terrain.activeTerrains.Length > 0
+            ? Terrain.activeTerrains
+            : FindObjectsByType<Terrain>(FindObjectsInactive.Exclude);
+        if (terrains != null)
+        {
+            for (int i = 0; i < terrains.Length; i++)
+            {
+                Terrain t = terrains[i];
+                if (t == null || t.terrainData == null) continue;
+                Vector3 pos = t.transform.position;
+                Vector3 size = t.terrainData.size;
+                Bounds tBounds = new Bounds(pos + size * 0.5f, size);
+                if (!found)
+                {
+                    bounds = tBounds;
+                    found = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(tBounds);
+                }
+            }
+        }
+
         if (!found) bounds = new Bounds(Vector3.zero, new Vector3(fullMapRange, 20f, fullMapRange));
         worldBounds = bounds;
         hasWorldBounds = true;
+
+        float maxExtent = Mathf.Max(worldBounds.extents.x, worldBounds.extents.z);
+        float neededRange = Mathf.Max(maxExtent * 1.1f, Mathf.Max(worldBounds.size.x, worldBounds.size.z) * 0.55f);
+        if (neededRange > fullMapMaxRange)
+        {
+            fullMapMaxRange = neededRange * 1.5f;
+        }
     }
     private void RenderFullMap()
     {
         if (!fullMapOpen || mapCamera == null || fullMapImage == null) return;
         mapCamera.orthographicSize = fullMapZoom;
-        mapCamera.transform.position = new Vector3(mapCenter.x, mapCenter.y + height + fullMapZoom, mapCenter.z);
+        float highestY = hasWorldBounds ? worldBounds.max.y : mapCenter.y;
+        float lowestY = hasWorldBounds ? worldBounds.min.y : (mapCenter.y - 100f);
+        float cameraY = highestY + Mathf.Max(50f, height);
+        float sceneDepth = (cameraY - lowestY) + 100f;
+        mapCamera.farClipPlane = Mathf.Max(1000f, sceneDepth);
+        mapCamera.transform.position = new Vector3(mapCenter.x, cameraY, mapCenter.z);
+        if (minimapLight != null) minimapLight.cullingMask = mapCamera.cullingMask;
         RenderWithMapLighting();
         UpdateFullMapMarkers();
     }
@@ -369,13 +413,16 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     private void RenderMap(Vector3 center)
     {
         mapCamera.orthographicSize = range;
+        mapCamera.farClipPlane = Mathf.Max(1000f, height + 120f);
         mapCamera.transform.position = new Vector3(center.x, center.y + height, center.z);
+        if (minimapLight != null) minimapLight.cullingMask = mapCamera.cullingMask;
         RenderWithMapLighting();
     }
     private void RenderWithMapLighting()
     {
         if (mapCamera == null) return;
 
+        if (minimapLight != null) minimapLight.cullingMask = mapCamera.cullingMask;
         bool fog = RenderSettings.fog;
         Color ambient = RenderSettings.ambientLight;
         float ambientIntensity = RenderSettings.ambientIntensity;

@@ -1685,6 +1685,7 @@ GameObject:
   - component: {fileID: 5971796343320429128}
   - component: {fileID: 3893339509533389458}
   - component: {fileID: -862347513519946116}
+  - component: {fileID: 8309632649002132809}
   m_Layer: 0
   m_Name: WhiteclownPlayer
   m_TagString: Player
@@ -1987,6 +1988,22 @@ MonoBehaviour:
   minDistance: 2
   minBpm: 60
   maxBpm: 170
+--- !u!114 &8309632649002132809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6225752193783759889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cccafa9b5584df28497c80188ef262e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerQuickChat
+  headHeight: 2.1
+  worldWidth: 2.2
+  showTime: 4
+  fadeTime: 0.5
 --- !u!1 &6552484619928083958
 GameObject:
   m_ObjectHideFlags: 0

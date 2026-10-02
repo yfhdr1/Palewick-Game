@@ -119,6 +119,7 @@ namespace Palewick.EditorTools
             RectTransform plate = Node("NamePlate", root);
             Place(plate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(110f, -52f), new Vector2(460f, 106f));
             Image plateImg = Img(plate.gameObject, Spr("lobby_nameplate.png"), Color.white, true);
+            Slice(plateImg);
             Button plateBtn = plate.gameObject.AddComponent<Button>();
             plateBtn.targetGraphic = plateImg;
             UnityEventTools.AddPersistentListener(plateBtn.onClick, lobby.OpenNamePanel);
@@ -189,7 +190,7 @@ namespace Palewick.EditorTools
             }
             return null;
         }
-        private static void PrepareImports()
+        internal static void PrepareImports()
         {
             string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { ArtFolder });
             for (int i = 0; i < guids.Length; i++)
@@ -226,13 +227,25 @@ namespace Palewick.EditorTools
                     ti.alphaIsTransparency = true;
                     changed = true;
                 }
-                if (path.EndsWith("lobby_panel.png", StringComparison.OrdinalIgnoreCase) && ti.spriteBorder != new Vector4(40f, 40f, 40f, 40f))
+                Vector4 border = SpriteBorderFor(path);
+                if (border != Vector4.zero && ti.spriteBorder != border)
                 {
-                    ti.spriteBorder = new Vector4(40f, 40f, 40f, 40f);
+                    ti.spriteBorder = border;
                     changed = true;
                 }
                 if (changed) ti.SaveAndReimport();
             }
+        }
+        private static Vector4 SpriteBorderFor(string path)
+        {
+            if (path.EndsWith("lobby_panel.png", StringComparison.OrdinalIgnoreCase)) return new Vector4(40f, 40f, 40f, 40f);
+            if (path.EndsWith("lobby_btn_side.png", StringComparison.OrdinalIgnoreCase)) return new Vector4(48f, 36f, 48f, 36f);
+            if (path.EndsWith("lobby_nameplate.png", StringComparison.OrdinalIgnoreCase)) return new Vector4(56f, 42f, 56f, 42f);
+            return Vector4.zero;
+        }
+        internal static void Slice(Image img)
+        {
+            if (img != null && img.sprite != null && img.sprite.border != Vector4.zero) img.type = Image.Type.Sliced;
         }
         private static Sprite Spr(string file)
         {
@@ -325,6 +338,7 @@ namespace Palewick.EditorTools
         private static Button PlateButton(GameObject go, string sprite, string text, int size, UnityAction action)
         {
             Image img = Img(go, Spr(sprite), Color.white, true);
+            Slice(img);
             Button b = go.AddComponent<Button>();
             b.targetGraphic = img;
             ColorBlock cb = b.colors;
@@ -334,8 +348,8 @@ namespace Palewick.EditorTools
             if (action != null) UnityEventTools.AddPersistentListener(b.onClick, action);
             RectTransform lr = Node("Label", go.transform);
             Stretch(lr);
-            lr.offsetMin = new Vector2(10f, 10f);
-            lr.offsetMax = new Vector2(-10f, -4f);
+            lr.offsetMin = new Vector2(32f, 12f);
+            lr.offsetMax = new Vector2(-32f, -8f);
             Label(lr.gameObject, text, size, TextColor, TextAnchor.MiddleCenter);
             return b;
         }
@@ -361,7 +375,7 @@ namespace Palewick.EditorTools
             GameObject panel = box.parent.gameObject;
             Title(box, "Servers");
             RectTransform close = Node("CloseButton_ServerPanel", box);
-            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-10f, -10f), new Vector2(110f, 110f));
+            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-16f, -16f), new Vector2(110f, 110f));
             RoundButton(close.gameObject, Spr("lobby_close.png"), browser.CloseServerPanel);
             RectTransform input = Node("ServerNameInput", box);
             Place(input, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(40f, -130f), new Vector2(-470f, 96f));
@@ -420,6 +434,7 @@ namespace Palewick.EditorTools
             PlateButton(solo.gameObject, "lobby_btn_side.png", "Single Player", 46, lobby.OnSinglePlayerPressed);
             RectTransform item = Node("ServerItem", content);
             Image itemImg = Img(item.gameObject, Spr("lobby_btn_side.png"), Color.white, true);
+            Slice(itemImg);
             Button itemBtn = item.gameObject.AddComponent<Button>();
             itemBtn.targetGraphic = itemImg;
             LayoutElement le = item.gameObject.AddComponent<LayoutElement>();
@@ -440,7 +455,7 @@ namespace Palewick.EditorTools
             GameObject panel = box.parent.gameObject;
             Title(box, "Enter your name");
             RectTransform close = Node("CloseButton", box);
-            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-10f, -10f), new Vector2(100f, 100f));
+            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-16f, -16f), new Vector2(100f, 100f));
             RoundButton(close.gameObject, Spr("lobby_close.png"), lobby.CloseNamePanel);
             lobby.nameCloseButton = close.gameObject;
             RectTransform input = Node("NameInput", box);

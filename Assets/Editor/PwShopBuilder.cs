@@ -73,21 +73,33 @@ namespace Palewick.EditorTools
             Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-16f, -16f), new Vector2(96f, 96f));
             ui.closeButton = RoundButton(close.gameObject, Spr("lobby_close.png"), ui.Close);
             RectTransform badge = Node("ShopPoints", box);
-            Place(badge, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -14f), new Vector2(290f, 72f));
+            Place(badge, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -22f), new Vector2(252f, 64f));
             LobbyBuilder.Slice(Img(badge.gameObject, Spr("lobby_nameplate.png"), new Color(1f, 1f, 1f, 0.9f), false));
             RectTransform badgeIcon = Node("Icon", badge);
-            Place(badgeIcon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(52f, 0f), new Vector2(40f, 40f));
+            Place(badgeIcon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(46f, 0f), new Vector2(36f, 36f));
             Img(badgeIcon.gameObject, Spr("lobby_ember.png"), new Color(1f, 0.76f, 0.3f, 1f), false);
             RectTransform badgeValue = Node("PointsValue", badge);
-            Place(badgeValue, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(86f, 0f), new Vector2(160f, 54f));
-            ui.pointsText = Label(badgeValue.gameObject, "0", 42, TextColor, TextAnchor.MiddleLeft);
+            Place(badgeValue, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(76f, 0f), new Vector2(150f, 48f));
+            ui.pointsText = Label(badgeValue.gameObject, "0", 38, TextColor, TextAnchor.MiddleLeft);
+            RectTransform tabsBar = Node("TabsBar", box);
+            Place(tabsBar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -152f), new Vector2(1360f, 74f));
+            HorizontalLayoutGroup tabsLayout = tabsBar.gameObject.AddComponent<HorizontalLayoutGroup>();
+            tabsLayout.childAlignment = TextAnchor.MiddleCenter;
+            tabsLayout.spacing = 16f;
+            tabsLayout.childControlWidth = false;
+            tabsLayout.childControlHeight = false;
+            tabsLayout.childForceExpandWidth = false;
+            tabsLayout.childForceExpandHeight = false;
             string[] tabNames = { "Character", "Gear", "Points" };
             List<PwShopUI.Section> sections = new List<PwShopUI.Section>();
             for (int t = 0; t < tabNames.Length; t++)
             {
                 PwShopUI.Section section = new PwShopUI.Section();
-                RectTransform tab = Node("Tab" + t, box);
-                Place(tab, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2((t - 1) * 448f, -152f), new Vector2(436f, 74f));
+                RectTransform tab = Node("Tab" + t, tabsBar);
+                tab.sizeDelta = new Vector2(436f, 74f);
+                LayoutElement le = tab.gameObject.AddComponent<LayoutElement>();
+                le.preferredWidth = 436f;
+                le.preferredHeight = 74f;
                 Image fill = Img(tab.gameObject, Spr("lobby_btn_side.png"), new Color(0.14f, 0.12f, 0.13f, 1f), true);
                 LobbyBuilder.Slice(fill);
                 Button tabButton = tab.gameObject.AddComponent<Button>();
@@ -109,7 +121,7 @@ namespace Palewick.EditorTools
             ui.sections = sections.ToArray();
             RectTransform pointsPage = (RectTransform)sections[2].root.transform;
             pointsPage.offsetMin = new Vector2(60f, 110f);
-            pointsPage.offsetMax = new Vector2(-60f, -240f);
+            pointsPage.offsetMax = new Vector2(-60f, -260f);
             GridLayoutGroup pointsGrid = sections[2].root.AddComponent<GridLayoutGroup>();
             pointsGrid.cellSize = new Vector2(390f, 470f);
             pointsGrid.spacing = new Vector2(40f, 40f);
@@ -139,6 +151,7 @@ namespace Palewick.EditorTools
                 sections[i].root.SetActive(i == 0);
             }
             shade.gameObject.SetActive(false);
+            LobbyBuilder.ReorderModals(root);
             EditorUtility.SetDirty(ui);
         }
         private static void AddCard(List<PwShopUI.Card> cards, List<PwShopUI.Section> sections, int[] slot, int section, int kind, int flag, int price, int skinIndex, int lampIndex, string name, string line1, string line2, string art, Color artColor)
@@ -149,7 +162,7 @@ namespace Palewick.EditorTools
             int line = index / 4;
             float[] columns = { -615f, -205f, 205f, 615f };
             RectTransform tile = Node("Card" + section + "_" + index, sections[section].root.transform);
-            Place(tile, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(columns[col], -196f - line * 490f), new Vector2(390f, 470f));
+            Place(tile, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(columns[col], -260f - line * 490f), new Vector2(390f, 470f));
             PwShopUI.Card card = new PwShopUI.Card();
             card.section = section;
             card.kind = kind;

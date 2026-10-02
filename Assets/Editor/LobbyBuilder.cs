@@ -114,8 +114,9 @@ namespace Palewick.EditorTools
             }
             lobby.drips = drips.ToArray();
             RectTransform title = Node("Title", root);
-            Place(title, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(860f, 235f));
-            Img(title.gameObject, Spr("lobby_title.png"), Color.white, false);
+            Place(title, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -12f), new Vector2(760f, 208f));
+            Image titleImg = Img(title.gameObject, Spr("lobby_title.png"), Color.white, false);
+            titleImg.preserveAspect = true;
             RectTransform plate = Node("NamePlate", root);
             Place(plate, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(110f, -52f), new Vector2(460f, 106f));
             Image plateImg = Img(plate.gameObject, Spr("lobby_nameplate.png"), Color.white, true);
@@ -125,9 +126,9 @@ namespace Palewick.EditorTools
             UnityEventTools.AddPersistentListener(plateBtn.onClick, lobby.OpenNamePanel);
             RectTransform nameText = Node("PlayerName", plate);
             Place(nameText, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            nameText.offsetMin = new Vector2(90f, 14f);
-            nameText.offsetMax = new Vector2(-20f, -10f);
-            lobby.nameLabel = Label(nameText.gameObject, "Player", 44, TextColor, TextAnchor.MiddleLeft);
+            nameText.offsetMin = new Vector2(80f, 14f);
+            nameText.offsetMax = new Vector2(-36f, -10f);
+            lobby.nameLabel = Label(nameText.gameObject, "Player", 44, TextColor, TextAnchor.MiddleCenter);
             RectTransform avatar = Node("Avatar", root);
             Place(avatar, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -30f), new Vector2(150f, 150f));
             Image avatarImg = Img(avatar.gameObject, Spr("lobby_avatar.png"), Color.white, true);
@@ -171,6 +172,7 @@ namespace Palewick.EditorTools
             browser.loadingPanel = loading;
             lobby.loadingPanel = loading;
             PwLoginBuilder.Build(root, lobby);
+            ReorderModals(root);
             BuildAudio(lobby);
             BuildStage(lobby, viewImg);
             EditorUtility.SetDirty(lobby);
@@ -246,6 +248,16 @@ namespace Palewick.EditorTools
         internal static void Slice(Image img)
         {
             if (img != null && img.sprite != null && img.sprite.border != Vector4.zero) img.type = Image.Type.Sliced;
+        }
+        internal static void ReorderModals(Transform root)
+        {
+            if (root == null) return;
+            string[] modalNames = { "ServerPanel", "ShopPanel", "NamePanel", "ExitPanel", "StartModePanel", "LanguagePanel", "LoginPanel", "LoadingPanel" };
+            for (int i = 0; i < modalNames.Length; i++)
+            {
+                Transform m = root.Find(modalNames[i]);
+                if (m != null) m.SetAsLastSibling();
+            }
         }
         private static Sprite Spr(string file)
         {

@@ -3,17 +3,23 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 public class PwShop : MonoBehaviour
 {
-    public const int SkinRed = 1;
-    public const int SkinBlack = 2;
-    public const int SkinGold = 4;
+    public const int SkinButcher = 1;
+    public const int SkinWraith = 2;
+    public const int SkinPlague = 4;
     public const int FlashUp = 8;
-    public const int LampRed = 16;
-    public const int LampBlue = 32;
-    public const int PriceRed = 5;
-    public const int PriceBlack = 5;
-    public const int PriceGold = 10;
+    public const int LampCursed = 16;
+    public const int LampSpectral = 32;
+    public const int ItemTalisman = 64;
+    public const int ItemAdrenaline = 128;
+    public const int ItemCharm = 256;
+    public const int PriceButcher = 5;
+    public const int PriceWraith = 7;
+    public const int PricePlague = 10;
     public const int PriceFlash = 10;
     public const int PriceLamp = 5;
+    public const int PriceTalisman = 8;
+    public const int PriceAdrenaline = 6;
+    public const int PriceCharm = 12;
     private const string OwnedCloudKey = "shop";
     private const string SkinCloudKey = "skin";
     private const string OwnedCache = "pw_shop_";
@@ -44,11 +50,23 @@ public class PwShop : MonoBehaviour
     }
     public static int Look
     {
-        get { return skin + lamp * 10 + (FlashlightUpgraded ? 100 : 0); }
+        get { return skin + lamp * 10 + (FlashlightUpgraded ? 100 : 0) + (HasTalisman ? 1000 : 0); }
     }
     public static bool FlashlightUpgraded
     {
         get { return (owned & FlashUp) != 0; }
+    }
+    public static bool HasTalisman
+    {
+        get { return (owned & ItemTalisman) != 0; }
+    }
+    public static bool HasAdrenaline
+    {
+        get { return (owned & ItemAdrenaline) != 0; }
+    }
+    public static bool HasLuckyCharm
+    {
+        get { return (owned & ItemCharm) != 0; }
     }
     public static bool Owns(int flag)
     {
@@ -56,15 +74,15 @@ public class PwShop : MonoBehaviour
     }
     public static int FlagForSkin(int index)
     {
-        if (index == 1) return SkinRed;
-        if (index == 2) return SkinBlack;
-        if (index == 3) return SkinGold;
+        if (index == 1) return SkinButcher;
+        if (index == 2) return SkinWraith;
+        if (index == 3) return SkinPlague;
         return 0;
     }
     public static int FlagForLamp(int index)
     {
-        if (index == 1) return LampRed;
-        if (index == 2) return LampBlue;
+        if (index == 1) return LampCursed;
+        if (index == 2) return LampSpectral;
         return 0;
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

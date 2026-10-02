@@ -363,9 +363,9 @@ public class EnemyAI : MonoBehaviourPunCallbacks, IPunObservable
         }
         if (lastPlayerPositions.Count > 16) lastPlayerPositions.Clear();
     }
-    private bool LitByFlashlight(Transform target)
+    private float FlashlightSlow(Transform target)
     {
-        if (target == null) return false;
+        if (target == null) return 1f;
         Light[] lights = target.GetComponentsInChildren<Light>(false);
         Vector3 me = transform.position + Vector3.up * eyeHeight * 0.8f;
         for (int i = 0; i < lights.Length; i++)
@@ -375,9 +375,12 @@ public class EnemyAI : MonoBehaviourPunCallbacks, IPunObservable
             Vector3 to = me - l.transform.position;
             float d = to.magnitude;
             if (d > flashlightSlowRange || d < 0.01f) continue;
-            if (Vector3.Angle(l.transform.forward, to) <= flashlightSlowAngle) return true;
+            if (Vector3.Angle(l.transform.forward, to) <= flashlightSlowAngle)
+            {
+                return PwLoadout.IsWarded(l) ? flashlightSlowFactor * 0.8f : flashlightSlowFactor;
+            }
         }
-        return false;
+        return 1f;
     }
     private void OpenDoorAhead()
     {
@@ -407,7 +410,7 @@ public class EnemyAI : MonoBehaviourPunCallbacks, IPunObservable
         {
             nextSightCheck = Time.time + 0.25f;
             cachedSight = HasLineOfSight(target);
-            speedFactor = LitByFlashlight(target) ? flashlightSlowFactor : 1f;
+            speedFactor = FlashlightSlow(target);
         }
         return cachedSight;
     }

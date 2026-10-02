@@ -205,6 +205,6 @@ public class PwShopUI : MonoBehaviour
     {
         LobbyManager lobby = FindAnyObjectByType<LobbyManager>(FindObjectsInactive.Include);
         if (lobby == null || lobby.stageModel == null) return;
-        PwLoadout.Tint(lobby.stageModel, PwShop.Skin);
+        PwLoadout.ApplySkin(lobby.stageModel, PwShop.Skin);
     }
 }

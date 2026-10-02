@@ -58,7 +58,11 @@ public class StaminaSystem : MonoBehaviour
         {
             regenTimer += Time.deltaTime;
             if (regenTimer >= Mathf.Max(0f, regenDelay) && currentStamina < staminaLimit)
-                currentStamina = Mathf.Min(staminaLimit, currentStamina + Mathf.Max(0f, regenRate) * Time.deltaTime);
+            {
+                float rate = Mathf.Max(0f, regenRate);
+                if (PwShop.HasAdrenaline) rate *= 1.25f;
+                currentStamina = Mathf.Min(staminaLimit, currentStamina + rate * Time.deltaTime);
+            }
         }
         if (!Mathf.Approximately(currentStamina, lastFrameStamina))
         {

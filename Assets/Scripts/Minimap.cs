@@ -17,6 +17,10 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     [SerializeField] private Button closeMapButton;
     [SerializeField] private Button zoomInButton;
     [SerializeField] private Button zoomOutButton;
+    [SerializeField] private RawImage fullMapGrid;
+    [SerializeField] private Text fullMapScaleText;
+    private Texture2D gridTexture;
+    private const float GridCellMeters = 50f;
     private Vector3 mapCenter;
     private Bounds worldBounds;
     private bool hasWorldBounds;
@@ -93,6 +97,12 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         mapImage.texture = texture;
         fullMapImage.texture = texture;
         fullMapImage.color = Color.white;
+        if (fullMapGrid != null && fullMapGrid.texture == null)
+        {
+            gridTexture = MakeGridTexture(128);
+            fullMapGrid.texture = gridTexture;
+            fullMapGrid.raycastTarget = false;
+        }
         BuildCamera();
         closeMapButton.onClick.AddListener(CloseFullMap);
         zoomInButton.onClick.AddListener(ZoomInFullMap);
@@ -139,6 +149,12 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         {
             Destroy(generatedDot.texture);
             Destroy(generatedDot);
+        }
+        if (gridTexture != null)
+        {
+            if (fullMapGrid != null && fullMapGrid.texture == gridTexture) fullMapGrid.texture = null;
+            Destroy(gridTexture);
+            gridTexture = null;
         }
     }
     private void BuildCamera()
@@ -269,27 +285,42 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         mapCamera.transform.position = new Vector3(mapCenter.x, cameraY, mapCenter.z);
         if (minimapLight != null) minimapLight.cullingMask = mapCamera.cullingMask;
         RenderWithMapLighting();
+        UpdateGridOverlay();
         UpdateFullMapMarkers();
+    }
+    private void UpdateGridOverlay()
+    {
+        if (fullMapGrid != null)
+        {
+            float tiles = fullMapZoom * 2f / GridCellMeters;
+            float u = (mapCenter.x - fullMapZoom) / GridCellMeters;
+            float v = (mapCenter.z - fullMapZoom) / GridCellMeters;
+            fullMapGrid.uvRect = new Rect(u, v, tiles, tiles);
+        }
+        if (fullMapScaleText != null)
+        {
+            fullMapScaleText.text = Mathf.RoundToInt(fullMapZoom * 2f) + " m";
+        }
     }
     private void UpdateFullMapMarkers()
     {
         if (fullMapMarkers == null) return;
         Vector2 size = fullMapMarkers.rect.size;
         for (int i = 0; i < fullMapMarkers.childCount; i++) Destroy(fullMapMarkers.GetChild(i).gameObject);
-        if (localMotor != null) AddFullMarker(localMotor.transform.position, TeamColor(localMotor), "Me");
+        if (localMotor != null) AddFullMarker(localMotor.transform.position, TeamColor(localMotor), "Me", localMotor.transform.eulerAngles.y, 30f);
         foreach (KeyValuePair<CharController_Motor, Image> pair in playerDots)
         {
-            if (pair.Key != null && pair.Key != localMotor && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, TeamColor(pair.Key), "Player");
+            if (pair.Key != null && pair.Key != localMotor && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, TeamColor(pair.Key), "Player", 0f, 18f);
         }
         if (showMonsterMarkers)
         {
             foreach (KeyValuePair<EnemyAI, Image> pair in enemyDots)
             {
-                if (pair.Key != null && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, new Color(0.9f, 0.04f, 0.04f, 1f), "Monster");
+                if (pair.Key != null && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, new Color(0.9f, 0.04f, 0.04f, 1f), "Monster", 0f, 20f);
             }
         }
     }
-    private void AddFullMarker(Vector3 position, Color color, string name)
+    private void AddFullMarker(Vector3 position, Color color, string name, float yaw, float size)
     {
         if (fullMapMarkers == null) return;
         float x = Mathf.InverseLerp(mapCenter.x - fullMapZoom, mapCenter.x + fullMapZoom, position.x);
@@ -299,17 +330,41 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         RectTransform rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(x, y);
         rt.anchorMax = new Vector2(x, y);
-        rt.sizeDelta = new Vector2(22f, 22f);
+        rt.sizeDelta = new Vector2(size, size);
         Image image = go.GetComponent<Image>();
-        image.sprite = dotSprite;
+        bool isMe = name == "Me";
+        Sprite arrow = localArrow != null ? localArrow.sprite : null;
+        image.sprite = isMe && arrow != null ? arrow : dotSprite;
         image.color = color;
         image.raycastTarget = false;
+        if (isMe)
+        {
+            rt.localRotation = Quaternion.Euler(0f, 0f, -yaw);
+        }
+        else if (name == "Monster")
+        {
+            GameObject ringGo = new GameObject("Ring", typeof(RectTransform), typeof(Image));
+            ringGo.transform.SetParent(rt, false);
+            RectTransform ringRt = ringGo.GetComponent<RectTransform>();
+            ringRt.anchorMin = new Vector2(0.5f, 0.5f);
+            ringRt.anchorMax = new Vector2(0.5f, 0.5f);
+            ringRt.sizeDelta = new Vector2(size * 1.9f, size * 1.9f);
+            Image ring = ringGo.GetComponent<Image>();
+            ring.sprite = dotSprite;
+            ring.color = new Color(0.9f, 0.04f, 0.04f, 0.28f);
+            ring.raycastTarget = false;
+        }
     }
     private void LateUpdate()
     {
         if (fullMapOpen)
         {
             HandleFullMapInput();
+            if (fullMapOpen && Time.unscaledTime >= nextRender)
+            {
+                nextRender = Time.unscaledTime + 0.25f;
+                RenderFullMap();
+            }
             return;
         }
         float now = Time.unscaledTime;
@@ -566,6 +621,30 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
                 float a = Mathf.Clamp01(r - d + 0.5f);
                 float w = border > 0f ? Mathf.Clamp01(r - border - d + 0.5f) : 1f;
                 px[y * size + x] = new Color(w, w, w, a);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+    public static Texture2D MakeGridTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Repeat;
+        tex.filterMode = FilterMode.Bilinear;
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color line = new Color(0.75f, 0.78f, 0.72f, 0.22f);
+        Color sub = new Color(0.75f, 0.78f, 0.72f, 0.08f);
+        Color[] px = new Color[size * size];
+        int quarter = size / 4;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = clear;
+                if (x == 0 || y == 0) c = line;
+                else if (x % quarter == 0 || y % quarter == 0) c = sub;
+                px[y * size + x] = c;
             }
         }
         tex.SetPixels(px);

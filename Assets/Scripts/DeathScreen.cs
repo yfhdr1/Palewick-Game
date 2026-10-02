@@ -124,6 +124,14 @@ public class DeathScreen : MonoBehaviour
     private void Respawn()
     {
         if (!ready || waitingAd) return;
+        if (PwShop.HasLuckyCharm && Random.value < 0.3f)
+        {
+            if (Revive())
+            {
+                Message("Lucky charm saved your point");
+                return;
+            }
+        }
         if (!PwPoints.TrySpend(PwPoints.RespawnCost))
         {
             Message("Not enough points");

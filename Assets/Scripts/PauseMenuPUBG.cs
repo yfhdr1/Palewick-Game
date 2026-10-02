@@ -105,8 +105,8 @@ public class PauseMenuPUBG : MonoBehaviour
     private readonly Color bloodBright = new Color(1f, 0.16f, 0.16f, 1f);
     private readonly Color bone = new Color(0.9f, 0.87f, 0.82f, 1f);
     private readonly Color ash = new Color(0.55f, 0.53f, 0.52f, 1f);
-    private readonly Color rowColor = new Color(0.075f, 0.012f, 0.02f, 0.94f);
-    private readonly Color sectionColor = new Color(0.2f, 0.025f, 0.04f, 0.97f);
+    private readonly Color rowColor = new Color(0.045f, 0.008f, 0.013f, 0.96f);
+    private readonly Color sectionColor = new Color(0.14f, 0.016f, 0.028f, 0.98f);
     private readonly Color segBorder = new Color(0.5f, 0.06f, 0.08f, 1f);
     private readonly Color segFill = new Color(0.09f, 0.008f, 0.015f, 1f);
     private readonly Color segFillOn = new Color(0.62f, 0.025f, 0.055f, 1f);
@@ -156,6 +156,7 @@ public class PauseMenuPUBG : MonoBehaviour
             {
                 panelGroup = pausePanel.AddComponent<CanvasGroup>();
             }
+            PwHorrorSettingsFx.Attach(pausePanel.transform as RectTransform);
             pausePanel.SetActive(false);
         }
         GameObject box = FindChild(transform, "MenuBox");
@@ -347,7 +348,7 @@ public class PauseMenuPUBG : MonoBehaviour
         Text t = MakeText(rt, D(key), 29, TextAnchor.MiddleCenter, ash, false);
         Stretch(t.rectTransform, Vector2.zero, Vector2.one, new Vector2(14f, 0f), new Vector2(-14f, 0f));
         int index = i;
-        BindButton(b, () => SelectTab(index));
+        BindButton(b, () => { PwHorrorSettingsFx.TabChanged(); SelectTab(index); });
         tabFills.Add(fill);
         tabBars.Add(bar);
         tabTexts.Add(t);
@@ -381,7 +382,7 @@ public class PauseMenuPUBG : MonoBehaviour
             b.transition = Selectable.Transition.None;
             int pageIndex = pageInfos.Count;
             int subIndex = s;
-            BindButton(b, () => SelectSub(pageIndex, subIndex));
+            BindButton(b, () => { PwHorrorSettingsFx.TabChanged(); SelectSub(pageIndex, subIndex); });
             info.subFills.Add(fill);
             info.subLines.Add(line);
             info.subTexts.Add(t);
@@ -2022,6 +2023,7 @@ public class PauseMenuPUBG : MonoBehaviour
             LockPlayer();
             ApplyMenuSound();
             infoTimer = 0f;
+            PwHorrorSettingsFx.MenuOpened();
             animRoutine = StartCoroutine(Anim(true));
         }
         else
@@ -2175,8 +2177,9 @@ public class PauseMenuPUBG : MonoBehaviour
         {
             return;
         }
-        slider.onValueChanged.AddListener(action);
-        sliderBindings.Add(new KeyValuePair<Slider, UnityAction<float>>(slider, action));
+        UnityAction<float> wrapped = v => { PwHorrorSettingsFx.SliderMoved(); action(v); };
+        slider.onValueChanged.AddListener(wrapped);
+        sliderBindings.Add(new KeyValuePair<Slider, UnityAction<float>>(slider, wrapped));
     }
     private GameObject FindChild(Transform parent, string childName)
     {

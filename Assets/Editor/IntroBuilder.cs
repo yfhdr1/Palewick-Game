@@ -74,6 +74,13 @@ namespace Palewick.EditorTools
             RectTransform wText = Node("WarningText", warning);
             Place(wText, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -100f), new Vector2(1600f, 90f));
             Label(wText.gameObject, "Use headphones for the best experience", 58, TextColor, TextAnchor.MiddleCenter);
+            RectTransform glow = Node("GlowTitle", warning);
+            Place(glow, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(1400f, 160f));
+            Text glowText = Label(glow.gameObject, "PALEWICK", 120, BloodColor, TextAnchor.MiddleCenter);
+            Outline glowOutline = glow.gameObject.AddComponent<Outline>();
+            glowOutline.effectColor = new Color(0.55f, 0.02f, 0.03f, 0.9f);
+            glowOutline.effectDistance = new Vector2(4f, -4f);
+            intro.glowTitle = glowText;
             RectTransform skip = Node("SkipButton", root);
             Place(skip, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60f, 60f), new Vector2(320f, 100f));
             Image skipImg = Img(skip.gameObject, Spr("lobby_btn_side.png"), Color.white, true);
@@ -130,8 +137,25 @@ namespace Palewick.EditorTools
             RectTransform lt = Node("LoadingText", loading);
             Place(lt, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0.5f), new Vector2(-185f, 100f), new Vector2(420f, 70f));
             Label(lt.gameObject, "Loading...", 48, TextColor, TextAnchor.MiddleRight);
+            Sprite shadowSprite = SaveShadowSprite();
+            RectTransform drift = Node("ShadowDrift", loading);
+            Place(drift, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-1100f, 0f), new Vector2(300f, 760f));
+            Image driftImg = Img(drift.gameObject, shadowSprite, new Color(0f, 0f, 0f, 1f), false);
+            driftImg.preserveAspect = false;
+            CanvasGroup driftGroup = drift.gameObject.AddComponent<CanvasGroup>();
+            driftGroup.alpha = 0f;
+            driftGroup.blocksRaycasts = false;
+            driftGroup.interactable = false;
+            intro.shadowDrift = drift;
             loading.gameObject.SetActive(false);
             intro.loadingRoot = loading.gameObject;
+            RectTransform flicker = Stretch(Node("FlickerOverlay", root));
+            Img(flicker.gameObject, null, Color.black, false);
+            CanvasGroup flickerGroup = flicker.gameObject.AddComponent<CanvasGroup>();
+            flickerGroup.alpha = 0f;
+            flickerGroup.blocksRaycasts = false;
+            flickerGroup.interactable = false;
+            intro.flickerGroup = flickerGroup;
             RectTransform fade = Stretch(Node("FadeImage", root));
             Img(fade.gameObject, null, Color.black, false);
             CanvasGroup fg = fade.gameObject.AddComponent<CanvasGroup>();
@@ -144,6 +168,24 @@ namespace Palewick.EditorTools
             EditorSceneManager.MarkSceneDirty(intro.gameObject.scene);
             Selection.activeGameObject = canvas.gameObject;
             EditorUtility.DisplayDialog("Intro", "Horror intro built. Press Ctrl+S to save the scene.", "OK");
+        }
+        private static Sprite SaveShadowSprite()
+        {
+            string path = ArtFolder + "/intro_shadow.png";
+            Texture2D tex = PwHorrorSettingsFx.MakeShadowTexture(96, 224);
+            System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
         private static void PrepareImports()
         {

@@ -105,11 +105,11 @@ public class PauseMenuPUBG : MonoBehaviour
     private readonly Color bloodBright = new Color(1f, 0.16f, 0.16f, 1f);
     private readonly Color bone = new Color(0.9f, 0.87f, 0.82f, 1f);
     private readonly Color ash = new Color(0.55f, 0.53f, 0.52f, 1f);
-    private readonly Color rowColor = new Color(0.1f, 0.095f, 0.1f, 0.93f);
-    private readonly Color sectionColor = new Color(0.15f, 0.13f, 0.13f, 0.96f);
-    private readonly Color segBorder = new Color(0.34f, 0.32f, 0.32f, 1f);
-    private readonly Color segFill = new Color(0.07f, 0.065f, 0.07f, 1f);
-    private readonly Color segFillOn = new Color(0.4f, 0.03f, 0.05f, 1f);
+    private readonly Color rowColor = new Color(0.075f, 0.012f, 0.02f, 0.94f);
+    private readonly Color sectionColor = new Color(0.2f, 0.025f, 0.04f, 0.97f);
+    private readonly Color segBorder = new Color(0.5f, 0.06f, 0.08f, 1f);
+    private readonly Color segFill = new Color(0.09f, 0.008f, 0.015f, 1f);
+    private readonly Color segFillOn = new Color(0.62f, 0.025f, 0.055f, 1f);
     private readonly Color segDisBorder = new Color(0.17f, 0.16f, 0.16f, 1f);
     private readonly Color segDisFill = new Color(0.05f, 0.048f, 0.05f, 1f);
     private readonly Color segDisText = new Color(0.27f, 0.26f, 0.26f, 1f);
@@ -197,6 +197,7 @@ public class PauseMenuPUBG : MonoBehaviour
         grungeSprite = MakeGrungeSprite();
         vignetteSprite = MakeVignetteSprite();
         BuildMenu();
+        AttachButtonEffects();
         BuildHudCounter();
         ApplyControlLayout();
         ApplyTransparentUi();
@@ -236,7 +237,20 @@ public class PauseMenuPUBG : MonoBehaviour
         }
         sliderBindings.Clear();
         BuildMenu();
+        AttachButtonEffects();
         SelectTab(currentTab);
+    }
+    private void AttachButtonEffects()
+    {
+        if (root == null) return;
+        Button[] buttons = root.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null && buttons[i].GetComponent<PwUiButtonFx>() == null)
+            {
+                buttons[i].gameObject.AddComponent<PwUiButtonFx>();
+            }
+        }
     }
     private void BuildMenu()
     {
@@ -271,7 +285,7 @@ public class PauseMenuPUBG : MonoBehaviour
         Image vig = AddImage(NewRect("Vignette", root), Color.white);
         vig.sprite = vignetteSprite;
         Stretch(vig.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-        Image side = AddImage(NewRect("SideBar", root), new Color(0.03f, 0.028f, 0.03f, 0.96f));
+        Image side = AddImage(NewRect("SideBar", root), new Color(0.045f, 0.004f, 0.012f, 0.98f));
         Stretch(side.rectTransform, new Vector2(0.83f, 0f), Vector2.one, Vector2.zero, new Vector2(0f, -100f));
         Image sideEdge = AddImage(NewRect("SideEdge", side.rectTransform), new Color(0.25f, 0.05f, 0.06f, 1f));
         Stretch(sideEdge.rectTransform, Vector2.zero, new Vector2(0f, 1f), Vector2.zero, new Vector2(2f, 0f));
@@ -1079,7 +1093,7 @@ public class PauseMenuPUBG : MonoBehaviour
         {
             return;
         }
-        float a = PlayerPrefs.GetInt(TransUiKey, 0) == 1 ? 0.45f : 1f;
+        float a = PlayerPrefs.GetInt(TransUiKey, 0) == 1 ? 0.45f : 0.75f;
         foreach (Transform child in transform.parent)
         {
             if (IsHudExcluded(child) || child.name == "DeathPanel")

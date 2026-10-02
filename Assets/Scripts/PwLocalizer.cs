@@ -200,11 +200,60 @@ public class PwLocalizer : MonoBehaviour
         { "clear light for dark rooms", new[] { "ضوء واضح للغرف المظلمة", "ڕووناکی ڕوون بۆ ژووری تاریک" } },
         { "watch a short video", new[] { "شاهد فيديو قصير", "ڤیدیۆیەکی کورت ببینە" } },
         { "get 1 point every minute", new[] { "تاخذ نقطة كل دقيقة", "هەر خولەکێک یەک خاڵ وەردەگریت" } },
-        { "please wait", new[] { "انتظر شوية", "تکایە چاوەڕێ بکە" } }
+        { "please wait", new[] { "انتظر شوية", "تکایە چاوەڕێ بکە" } },
+        { "map", new[] { "الخريطة", "نەخشە" } },
+        { "full map", new[] { "الخريطة الكاملة", "نەخشەی تەواو" } },
+        { "open map", new[] { "افتح الخريطة", "نەخشە بکەرەوە" } },
+        { "close map", new[] { "اغلق الخريطة", "نەخشە دابخە" } },
+        { "minimap", new[] { "الخريطة المصغرة", "نەخشەی بچووک" } },
+        { "zoom in", new[] { "تكبير", "گەورەکردن" } },
+        { "zoom out", new[] { "تصغير", "بچووککردنەوە" } },
+        { "legend", new[] { "الدليل", "ڕێنما" } },
+        { "you", new[] { "أنت", "تۆ" } },
+        { "teammate", new[] { "زميلك", "هاوڕێی تیم" } },
+        { "monster", new[] { "الوحش", "دڕندە" } },
+        { "items", new[] { "الأغراض", "شتەکان" } },
+        { "item", new[] { "غرض", "شت" } },
+        { "distance", new[] { "المسافة", "دووری" } },
+        { "north", new[] { "شمال", "باکوور" } },
+        { "south", new[] { "جنوب", "باشوور" } },
+        { "east", new[] { "شرق", "ڕۆژهەڵات" } },
+        { "west", new[] { "غرب", "ڕۆژئاوا" } },
+        { "store", new[] { "المتجر", "فرۆشگا" } },
+        { "skins", new[] { "الأشكال", "ڕووکارەکان" } },
+        { "skin", new[] { "الشكل", "ڕووکار" } },
+        { "lamps", new[] { "الفوانيس", "چراکان" } },
+        { "lamp", new[] { "فانوس", "چرا" } },
+        { "flashlight", new[] { "الفانوس", "چرا" } },
+        { "price", new[] { "السعر", "نرخ" } },
+        { "cost", new[] { "الكلفة", "تێچوو" } },
+        { "free", new[] { "مجاني", "بەخۆڕایی" } },
+        { "buy now", new[] { "اشتر الآن", "ئێستا بیکڕە" } },
+        { "purchased", new[] { "تم الشراء", "کڕدرا" } },
+        { "unlock", new[] { "افتح", "بیکەرەوە" } },
+        { "unlocked", new[] { "مفتوح", "کراوەتەوە" } },
+        { "locked", new[] { "مقفل", "داخراوە" } },
+        { "select", new[] { "اختر", "هەڵبژێرە" } },
+        { "selected", new[] { "مختار", "هەڵبژێردراو" } },
+        { "get points", new[] { "احصل على نقاط", "خاڵ بەدەست بهێنە" } },
+        { "free points", new[] { "نقاط مجانية", "خاڵی بەخۆڕایی" } },
+        { "earn points", new[] { "اجمع نقاط", "خاڵ کۆبکەرەوە" } },
+        { "your points", new[] { "نقاطك", "خاڵەکانت" } },
+        { "balance", new[] { "الرصيد", "باڵانس" } },
+        { "total", new[] { "المجموع", "کۆی گشتی" } },
+        { "purchase failed", new[] { "فشل الشراء", "کڕین سەرکەوتوو نەبوو" } },
+        { "purchase complete", new[] { "تم الشراء بنجاح", "کڕین تەواو بوو" } },
+        { "coming soon", new[] { "قريباً", "بەم زووانە" } },
+        { "sold out", new[] { "نفد", "تەواو بوو" } },
+        { "new", new[] { "جديد", "نوێ" } },
+        { "best value", new[] { "أفضل قيمة", "باشترین نرخ" } },
+        { "preview", new[] { "معاينة", "پێشبینین" } },
+        { "reward", new[] { "المكافأة", "خەڵات" } },
+        { "daily reward", new[] { "مكافأة يومية", "خەڵاتی ڕۆژانە" } },
+        { "come back later", new[] { "ارجع بعدين", "دواتر وەرەوە" } }
     };
     private readonly List<Entry> entries = new List<Entry>();
     private readonly Dictionary<Object, Entry> lookup = new Dictionary<Object, Entry>();
-    private readonly HashSet<string> reported = new HashSet<string>();
     private Font rtlFont;
     private TMP_FontAsset rtlTmpFont;
     private bool tmpFontTried;
@@ -370,7 +419,7 @@ public class PwLocalizer : MonoBehaviour
     private void Apply(Entry e)
     {
         string src = e.source;
-        if (lang <= 0 || string.IsNullOrEmpty(src) || !HasLetters(src) || HasRtl(src))
+        if (lang <= 0 || string.IsNullOrEmpty(src) || !HasLetters(src) || HasRtl(src) || IsMeasurement(src))
         {
             e.Restore();
             if (e.Value != src)
@@ -384,7 +433,6 @@ public class PwLocalizer : MonoBehaviour
         string[] tr;
         if (!Words.TryGetValue(key, out tr))
         {
-            Report("PW_MISSING", src, e.Name);
             e.Restore();
             e.Value = src;
             e.applied = src;
@@ -432,18 +480,6 @@ public class PwLocalizer : MonoBehaviour
             default: return a;
         }
     }
-    private void Report(string tag, string text, string objectName)
-    {
-        if (string.IsNullOrEmpty(text) || !HasLetters(text) || HasRtl(text))
-        {
-            return;
-        }
-        string clean = text.Replace("\n", " ").Trim();
-        if (reported.Add(tag + clean))
-        {
-            Debug.Log(tag + " | " + clean + " | " + objectName);
-        }
-    }
     private static TextAnchor Mirror(TextAnchor a)
     {
         switch (a)
@@ -456,6 +492,28 @@ public class PwLocalizer : MonoBehaviour
             case TextAnchor.LowerRight: return TextAnchor.LowerLeft;
             default: return a;
         }
+    }
+    private static bool IsMeasurement(string s)
+    {
+        bool digit = false;
+        int letters = 0;
+        for (int i = 0; i < s.Length; i++)
+        {
+            char c = s[i];
+            if (char.IsDigit(c))
+            {
+                digit = true;
+            }
+            else if (char.IsLetter(c))
+            {
+                letters++;
+            }
+            else if (c != ' ' && c != '.' && c != ',' && c != '-' && c != '+' && c != '/' && c != ':' && c != '%' && c != 'x')
+            {
+                return false;
+            }
+        }
+        return digit && letters <= 2;
     }
     private static bool HasLetters(string s)
     {

@@ -11,6 +11,14 @@ public class PwPointsHud : MonoBehaviour
     private static int flashValue;
     private int shown = int.MinValue;
     private float pulseUntil;
+    private void Awake()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null && canvas.transform.Find("DeathPanel") != null && transform.name == "PointsBadge")
+        {
+            gameObject.SetActive(false);
+        }
+    }
     public static void Flash(int amount)
     {
         flashValue = amount;

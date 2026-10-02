@@ -5,6 +5,24 @@ using Photon.Pun;
 using Photon.Realtime;
 public class Minimap : MonoBehaviour
 {
+    [Header("Full Map")]
+    public float fullMapRange = 220f;
+    public float fullMapMinRange = 25f;
+    public float fullMapMaxRange = 420f;
+    public bool showMonsterMarkers = true;
+    private GameObject fullMapPanel;
+    private RawImage fullMapImage;
+    private RectTransform fullMapMarkers;
+    private Button closeMapButton;
+    private Button zoomInButton;
+    private Button zoomOutButton;
+    private Vector3 mapCenter;
+    private Bounds worldBounds;
+    private bool hasWorldBounds;
+    private bool fullMapOpen;
+    private bool draggingMap;
+    private Vector2 lastMapPointer;
+    private float fullMapZoom;
     public RawImage mapImage;
     public RectTransform markers;
     public Image localArrow;
@@ -64,6 +82,8 @@ public class Minimap : MonoBehaviour
         texture.Create();
         mapImage.texture = texture;
         BuildCamera();
+        BuildFullMap();
+        CreateOpenButton();
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas != null)
         {
@@ -73,6 +93,10 @@ public class Minimap : MonoBehaviour
     }
     private void OnDestroy()
     {
+        if (fullMapPanel != null)
+        {
+            Destroy(fullMapPanel);
+        }
         if (mapCamera != null)
         {
             mapCamera.targetTexture = null;
@@ -112,8 +136,176 @@ public class Minimap : MonoBehaviour
         mapCamera.enabled = false;
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
     }
+    private void CreateOpenButton()
+    {
+        Button button = gameObject.GetComponent<Button>();
+        if (button == null) button = gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(OpenFullMap);
+    }
+    private void BuildFullMap()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return;
+        fullMapPanel = new GameObject("FullMapPanel", typeof(RectTransform), typeof(Image));
+        fullMapPanel.layer = 5;
+        fullMapPanel.transform.SetParent(canvas.rootCanvas.transform, false);
+        RectTransform panel = fullMapPanel.GetComponent<RectTransform>();
+        panel.anchorMin = Vector2.zero;
+        panel.anchorMax = Vector2.one;
+        panel.offsetMin = Vector2.zero;
+        panel.offsetMax = Vector2.zero;
+        Image dim = fullMapPanel.GetComponent<Image>();
+        dim.color = new Color(0.01f, 0.005f, 0.008f, 0.94f);
+        dim.raycastTarget = true;
+        fullMapImage = CreateMapImage(panel, "FullMap", new Color(0.72f, 0.68f, 0.62f, 1f));
+        fullMapImage.texture = texture;
+        fullMapImage.rectTransform.anchorMin = new Vector2(0.08f, 0.1f);
+        fullMapImage.rectTransform.anchorMax = new Vector2(0.92f, 0.9f);
+        fullMapImage.rectTransform.offsetMin = Vector2.zero;
+        fullMapImage.rectTransform.offsetMax = Vector2.zero;
+        fullMapMarkers = new GameObject("Markers", typeof(RectTransform)).GetComponent<RectTransform>();
+        fullMapMarkers.SetParent(fullMapImage.transform, false);
+        fullMapMarkers.anchorMin = Vector2.zero;
+        fullMapMarkers.anchorMax = Vector2.one;
+        fullMapMarkers.offsetMin = Vector2.zero;
+        fullMapMarkers.offsetMax = Vector2.zero;
+        Button close = CreateMapButton(panel, "CloseMap", "X", new Vector2(0.92f, 0.9f), new Vector2(120f, 80f));
+        closeMapButton = close;
+        close.onClick.AddListener(CloseFullMap);
+        zoomInButton = CreateMapButton(panel, "ZoomIn", "+", new Vector2(0.88f, 0.2f), new Vector2(100f, 80f));
+        zoomOutButton = CreateMapButton(panel, "ZoomOut", "−", new Vector2(0.88f, 0.1f), new Vector2(100f, 80f));
+        zoomInButton.onClick.AddListener(() => SetFullMapZoom(fullMapZoom - 20f));
+        zoomOutButton.onClick.AddListener(() => SetFullMapZoom(fullMapZoom + 20f));
+        fullMapPanel.SetActive(false);
+    }
+    private RawImage CreateMapImage(RectTransform parent, string name, Color color)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
+        go.layer = 5;
+        go.transform.SetParent(parent, false);
+        RawImage image = go.GetComponent<RawImage>();
+        image.color = color;
+        image.raycastTarget = true;
+        return image;
+    }
+    private Button CreateMapButton(RectTransform parent, string name, string label, Vector2 anchor, Vector2 size)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        go.layer = 5;
+        go.transform.SetParent(parent, false);
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        Image image = go.GetComponent<Image>();
+        image.color = new Color(0.12f, 0.02f, 0.025f, 0.88f);
+        Button button = go.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.transition = Selectable.Transition.ColorTint;
+        GameObject textObject = new GameObject("Label", typeof(RectTransform), typeof(Text));
+        textObject.transform.SetParent(go.transform, false);
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.text = label;
+        text.fontSize = 42;
+        text.color = new Color(0.95f, 0.88f, 0.82f, 1f);
+        text.alignment = TextAnchor.MiddleCenter;
+        text.raycastTarget = false;
+        return button;
+    }
+    private void OpenFullMap()
+    {
+        if (fullMapPanel == null) return;
+        if (!hasWorldBounds) CalculateWorldBounds();
+        Search();
+        fullMapOpen = true;
+        fullMapPanel.SetActive(true);
+        fullMapZoom = Mathf.Clamp(Mathf.Max(worldBounds.size.x, worldBounds.size.z) * 0.58f, fullMapMinRange, fullMapMaxRange);
+        mapCenter = worldBounds.center;
+        RenderFullMap();
+    }
+    private void CloseFullMap()
+    {
+        fullMapOpen = false;
+        if (fullMapPanel != null) fullMapPanel.SetActive(false);
+    }
+    private void SetFullMapZoom(float value)
+    {
+        fullMapZoom = Mathf.Clamp(value, fullMapMinRange, fullMapMaxRange);
+        RenderFullMap();
+    }
+    private void CalculateWorldBounds()
+    {
+        Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsInactive.Exclude);
+        bool found = false;
+        Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer r = renderers[i];
+            if (r == null || r.gameObject.layer == 5 || r is ParticleSystemRenderer) continue;
+            if (!found) { bounds = r.bounds; found = true; }
+            else bounds.Encapsulate(r.bounds);
+        }
+        if (!found) bounds = new Bounds(Vector3.zero, new Vector3(fullMapRange, 20f, fullMapRange));
+        worldBounds = bounds;
+        hasWorldBounds = true;
+    }
+    private void RenderFullMap()
+    {
+        if (!fullMapOpen || mapCamera == null || fullMapImage == null) return;
+        mapCamera.orthographicSize = fullMapZoom;
+        mapCamera.transform.position = new Vector3(mapCenter.x, mapCenter.y + height + fullMapZoom, mapCenter.z);
+        mapCamera.Render();
+        UpdateFullMapMarkers();
+    }
+    private void UpdateFullMapMarkers()
+    {
+        if (fullMapMarkers == null) return;
+        Vector2 size = fullMapMarkers.rect.size;
+        for (int i = 0; i < fullMapMarkers.childCount; i++) Destroy(fullMapMarkers.GetChild(i).gameObject);
+        if (localMotor != null) AddFullMarker(localMotor.transform.position, TeamColor(localMotor), "Me");
+        foreach (KeyValuePair<CharController_Motor, Image> pair in playerDots)
+        {
+            if (pair.Key != null && pair.Key != localMotor && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, TeamColor(pair.Key), "Player");
+        }
+        if (showMonsterMarkers)
+        {
+            foreach (KeyValuePair<EnemyAI, Image> pair in enemyDots)
+            {
+                if (pair.Key != null && pair.Key.gameObject.activeInHierarchy) AddFullMarker(pair.Key.transform.position, new Color(0.9f, 0.04f, 0.04f, 1f), "Monster");
+            }
+        }
+    }
+    private void AddFullMarker(Vector3 position, Color color, string name)
+    {
+        if (fullMapMarkers == null) return;
+        float x = Mathf.InverseLerp(mapCenter.x - fullMapZoom, mapCenter.x + fullMapZoom, position.x);
+        float y = Mathf.InverseLerp(mapCenter.z - fullMapZoom, mapCenter.z + fullMapZoom, position.z);
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(fullMapMarkers, false);
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(x, y);
+        rt.anchorMax = new Vector2(x, y);
+        rt.sizeDelta = new Vector2(22f, 22f);
+        Image image = go.GetComponent<Image>();
+        image.sprite = dotSprite;
+        image.color = color;
+        image.raycastTarget = false;
+    }
     private void LateUpdate()
     {
+        if (fullMapOpen)
+        {
+            HandleFullMapInput();
+            return;
+        }
         float now = Time.unscaledTime;
         if (now >= nextSearch)
         {
@@ -173,6 +365,43 @@ public class Minimap : MonoBehaviour
         {
             nextRender = now + RenderInterval;
             RenderMap(center);
+        }
+    }
+    private void HandleFullMapInput()
+    {
+        if (fullMapImage == null) return;
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton1))
+        {
+            CloseFullMap();
+            return;
+        }
+        if (Input.mouseScrollDelta.y != 0f) SetFullMapZoom(fullMapZoom - Input.mouseScrollDelta.y * 12f);
+        Vector2 pointer = Input.mousePosition;
+        bool pressed = Input.GetMouseButtonDown(0);
+        bool held = Input.GetMouseButton(0);
+        bool released = Input.GetMouseButtonUp(0);
+        if (Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            pointer = touch.position;
+            pressed = touch.phase == TouchPhase.Began;
+            held = touch.phase == TouchPhase.Moved || touch.phase == TouchPhase.Stationary;
+            released = touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled;
+        }
+        if (pressed)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(fullMapImage.rectTransform, pointer, null, out lastMapPointer);
+            draggingMap = true;
+        }
+        if (released) draggingMap = false;
+        if (draggingMap && held)
+        {
+            Vector2 current;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(fullMapImage.rectTransform, pointer, null, out current);
+            Vector2 delta = current - lastMapPointer;
+            lastMapPointer = current;
+            mapCenter -= new Vector3(delta.x, 0f, delta.y) * fullMapZoom / Mathf.Max(1f, fullMapImage.rectTransform.rect.width);
+            RenderFullMap();
         }
     }
     private void RenderMap(Vector3 center)

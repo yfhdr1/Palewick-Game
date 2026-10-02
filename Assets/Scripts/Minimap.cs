@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using Photon.Pun;
 using Photon.Realtime;
-public class Minimap : MonoBehaviour
+public class Minimap : MonoBehaviour, IPointerClickHandler
 {
     [Header("Full Map")]
     public float fullMapRange = 220f;
@@ -71,6 +72,8 @@ public class Minimap : MonoBehaviour
             enabled = false;
             return;
         }
+        mapImage.raycastTarget = true;
+        EnsureClickHandler();
         if (dotSprite == null)
         {
             Texture2D tex = MakeDiscTexture(64, 7f);
@@ -83,7 +86,6 @@ public class Minimap : MonoBehaviour
         mapImage.texture = texture;
         BuildCamera();
         BuildFullMap();
-        CreateOpenButton();
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas != null)
         {
@@ -136,12 +138,17 @@ public class Minimap : MonoBehaviour
         mapCamera.enabled = false;
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
     }
-    private void CreateOpenButton()
+    private void EnsureClickHandler()
     {
         Button button = gameObject.GetComponent<Button>();
         if (button == null) button = gameObject.AddComponent<Button>();
         button.transition = Selectable.Transition.None;
-        button.onClick.AddListener(OpenFullMap);
+        button.targetGraphic = mapImage;
+        button.onClick.RemoveListener(OpenFullMap);
+    }
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        OpenFullMap();
     }
     private void BuildFullMap()
     {

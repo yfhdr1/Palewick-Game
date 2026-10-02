@@ -235,13 +235,23 @@ public class PlayerSetup : MonoBehaviourPun, IPunObservable
             viewBtn.onClick.RemoveAllListeners();
             viewBtn.onClick.AddListener(viewSwitcher.ToggleView);
         }
-        Button interactBtn = FindButton("InteractButton");
-        if (interactBtn != null && interaction != null)
+        PwTouchButton touchInteract = FindTouchButton(PwTouchAction.Interact);
+        if (touchInteract != null && interaction != null)
         {
-            interactBtn.onClick.RemoveAllListeners();
-            interactBtn.onClick.AddListener(interaction.OnInteractButtonPressed);
-            interaction.interactButtonUI = interactBtn.gameObject;
-            interactBtn.gameObject.SetActive(false);
+            interaction.interactButtonUI = touchInteract.gameObject;
+            touchInteract.gameObject.SetActive(false);
+        }
+        else
+        {
+            // Backward-compatible fallback for scenes not yet rebuilt by the master fix.
+            Button interactBtn = FindButton("InteractButton");
+            if (interactBtn != null && interaction != null)
+            {
+                interactBtn.onClick.RemoveAllListeners();
+                interactBtn.onClick.AddListener(interaction.OnInteractButtonPressed);
+                interaction.interactButtonUI = interactBtn.gameObject;
+                interactBtn.gameObject.SetActive(false);
+            }
         }
     }
     private void DisableRemotePlayer()
@@ -274,6 +284,18 @@ public class PlayerSetup : MonoBehaviourPun, IPunObservable
         {
             characterMesh.SetActive(true);
         }
+    }
+    private static PwTouchButton FindTouchButton(PwTouchAction action)
+    {
+        PwTouchButton[] buttons = FindObjectsByType<PwTouchButton>(FindObjectsInactive.Include);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null && buttons[i].action == action)
+            {
+                return buttons[i];
+            }
+        }
+        return null;
     }
     private static Button FindButton(string objectName)
     {

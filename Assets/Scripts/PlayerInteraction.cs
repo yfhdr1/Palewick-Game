@@ -71,6 +71,13 @@ public class PlayerInteraction : MonoBehaviour
             return;
         }
         hookedButton = interactButtonUI;
+        PwTouchButton touchButton = interactButtonUI.GetComponent<PwTouchButton>();
+        if (touchButton != null && touchButton.action == PwTouchAction.Interact)
+        {
+            // PwTouchControls dispatches this button directly; do not add a second
+            // pointer handler that would fire the same interaction twice.
+            return;
+        }
         Button b = interactButtonUI.GetComponent<Button>();
         if (b != null)
         {

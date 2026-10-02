@@ -46,6 +46,7 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     private readonly List<EnemyAI> removeEnemies = new List<EnemyAI>();
     private RenderTexture texture;
     private Camera mapCamera;
+    private Light minimapLight;
     private Sprite generatedDot;
     private CharController_Motor localMotor;
     private GameObject loadingPanel;
@@ -87,9 +88,11 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         }
         texture = new RenderTexture(TexSize, TexSize, 16, RenderTextureFormat.ARGB32);
         texture.name = "MinimapTexture";
+        texture.filterMode = FilterMode.Bilinear;
         texture.Create();
         mapImage.texture = texture;
         fullMapImage.texture = texture;
+        fullMapImage.color = Color.white;
         BuildCamera();
         closeMapButton.onClick.AddListener(CloseFullMap);
         zoomInButton.onClick.AddListener(ZoomInFullMap);
@@ -111,15 +114,26 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         {
             mapCamera.targetTexture = null;
             Destroy(mapCamera.gameObject);
+            mapCamera = null;
+        }
+        if (minimapLight != null)
+        {
+            Destroy(minimapLight.gameObject);
+            minimapLight = null;
         }
         if (mapImage != null && mapImage.texture == texture)
         {
             mapImage.texture = null;
         }
+        if (fullMapImage != null && fullMapImage.texture == texture)
+        {
+            fullMapImage.texture = null;
+        }
         if (texture != null)
         {
             texture.Release();
             Destroy(texture);
+            texture = null;
         }
         if (generatedDot != null)
         {
@@ -134,7 +148,7 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         mapCamera.orthographic = true;
         mapCamera.orthographicSize = range;
         mapCamera.clearFlags = CameraClearFlags.SolidColor;
-        mapCamera.backgroundColor = new Color(0.04f, 0.02f, 0.02f, 1f);
+        mapCamera.backgroundColor = new Color(0.035f, 0.075f, 0.12f, 1f);
         mapCamera.cullingMask = ~(1 << 5);
         mapCamera.nearClipPlane = 0.3f;
         mapCamera.farClipPlane = height + 120f;
@@ -145,6 +159,16 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         mapCamera.targetTexture = texture;
         mapCamera.enabled = false;
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        GameObject lightObject = new GameObject("MinimapLight");
+        minimapLight = lightObject.AddComponent<Light>();
+        minimapLight.type = LightType.Directional;
+        minimapLight.color = new Color(0.88f, 0.92f, 1f, 1f);
+        minimapLight.intensity = 0.85f;
+        minimapLight.shadows = LightShadows.None;
+        minimapLight.cullingMask = mapCamera.cullingMask;
+        minimapLight.enabled = false;
+        lightObject.transform.rotation = Quaternion.Euler(65f, -30f, 0f);
     }
     public void OnPointerClick(PointerEventData eventData)
     {
@@ -200,7 +224,7 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         if (!fullMapOpen || mapCamera == null || fullMapImage == null) return;
         mapCamera.orthographicSize = fullMapZoom;
         mapCamera.transform.position = new Vector3(mapCenter.x, mapCenter.y + height + fullMapZoom, mapCenter.z);
-        mapCamera.Render();
+        RenderWithMapLighting();
         UpdateFullMapMarkers();
     }
     private void UpdateFullMapMarkers()
@@ -346,18 +370,30 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     {
         mapCamera.orthographicSize = range;
         mapCamera.transform.position = new Vector3(center.x, center.y + height, center.z);
+        RenderWithMapLighting();
+    }
+    private void RenderWithMapLighting()
+    {
+        if (mapCamera == null) return;
+
         bool fog = RenderSettings.fog;
         Color ambient = RenderSettings.ambientLight;
+        float ambientIntensity = RenderSettings.ambientIntensity;
+        bool lightEnabled = minimapLight != null && minimapLight.enabled;
         RenderSettings.fog = false;
-        RenderSettings.ambientLight = new Color(0.5f, 0.5f, 0.55f, 1f);
+        RenderSettings.ambientLight = new Color(0.58f, 0.62f, 0.7f, 1f);
+        RenderSettings.ambientIntensity = Mathf.Max(ambientIntensity, 1.25f);
+        if (minimapLight != null) minimapLight.enabled = true;
         try
         {
             mapCamera.Render();
         }
         finally
         {
+            if (minimapLight != null) minimapLight.enabled = lightEnabled;
             RenderSettings.fog = fog;
             RenderSettings.ambientLight = ambient;
+            RenderSettings.ambientIntensity = ambientIntensity;
         }
     }
     private Vector2 ToMap(Vector3 offset)

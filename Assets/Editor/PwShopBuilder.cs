@@ -12,6 +12,7 @@ namespace Palewick.EditorTools
     public static class PwShopBuilder
     {
         private const string ArtFolder = "Assets/UI_Lobby";
+        private const float CardBottomPadding = 32f;
         private static readonly Color TextColor = new Color(0.93f, 0.86f, 0.8f, 1f);
         private static readonly Color BloodColor = new Color(0.85f, 0.1f, 0.08f, 1f);
         private static readonly Color HintColor = new Color(0.75f, 0.68f, 0.66f, 0.85f);
@@ -45,6 +46,7 @@ namespace Palewick.EditorTools
         }
         public static void Build(Transform root, LobbyManager lobby)
         {
+            LobbyBuilder.PrepareImports();
             font = AssetDatabase.LoadAssetAtPath<Font>(ArtFolder + "/Creepster.ttf");
             Kill(root, "ShopPanel");
             Kill(root, "ShopBtn");
@@ -68,11 +70,11 @@ namespace Palewick.EditorTools
             Place(sub, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(-80f, 42f));
             Label(sub.gameObject, "Points come from map items and ads", 28, HintColor, TextAnchor.MiddleCenter);
             RectTransform close = Node("CloseButton", box);
-            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-12f, -12f), new Vector2(96f, 96f));
+            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-16f, -16f), new Vector2(96f, 96f));
             ui.closeButton = RoundButton(close.gameObject, Spr("lobby_close.png"), ui.Close);
             RectTransform badge = Node("ShopPoints", box);
             Place(badge, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -14f), new Vector2(290f, 72f));
-            Img(badge.gameObject, Spr("lobby_nameplate.png"), new Color(1f, 1f, 1f, 0.9f), false);
+            LobbyBuilder.Slice(Img(badge.gameObject, Spr("lobby_nameplate.png"), new Color(1f, 1f, 1f, 0.9f), false));
             RectTransform badgeIcon = Node("Icon", badge);
             Place(badgeIcon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(52f, 0f), new Vector2(40f, 40f));
             Img(badgeIcon.gameObject, Spr("lobby_ember.png"), new Color(1f, 0.76f, 0.3f, 1f), false);
@@ -87,6 +89,7 @@ namespace Palewick.EditorTools
                 RectTransform tab = Node("Tab" + t, box);
                 Place(tab, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2((t - 1) * 448f, -152f), new Vector2(436f, 74f));
                 Image fill = Img(tab.gameObject, Spr("lobby_btn_side.png"), new Color(0.14f, 0.12f, 0.13f, 1f), true);
+                LobbyBuilder.Slice(fill);
                 Button tabButton = tab.gameObject.AddComponent<Button>();
                 tabButton.targetGraphic = fill;
                 ColorBlock cb = tabButton.colors;
@@ -104,6 +107,17 @@ namespace Palewick.EditorTools
                 sections.Add(section);
             }
             ui.sections = sections.ToArray();
+            RectTransform pointsPage = (RectTransform)sections[2].root.transform;
+            pointsPage.offsetMin = new Vector2(60f, 110f);
+            pointsPage.offsetMax = new Vector2(-60f, -240f);
+            GridLayoutGroup pointsGrid = sections[2].root.AddComponent<GridLayoutGroup>();
+            pointsGrid.cellSize = new Vector2(390f, 470f);
+            pointsGrid.spacing = new Vector2(40f, 40f);
+            pointsGrid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            pointsGrid.startAxis = GridLayoutGroup.Axis.Horizontal;
+            pointsGrid.childAlignment = TextAnchor.MiddleCenter;
+            pointsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            pointsGrid.constraintCount = 4;
             List<PwShopUI.Card> cards = new List<PwShopUI.Card>();
             int[] slot = new int[tabNames.Length];
             AddCard(cards, sections, slot, 0, 0, 0, 0, 0, -1, "Default Skin", "The normal white look", "Free for everyone", "shop_skin_white", Color.white);
@@ -145,28 +159,28 @@ namespace Palewick.EditorTools
             card.lampIndex = lampIndex;
             card.button = PlateButton(tile.gameObject, "lobby_btn_side.png", string.Empty, 1, null);
             RectTransform icon = Node("Icon", tile);
-            Place(icon, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(276f, 276f));
+            Place(icon, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -16f), new Vector2(256f, 256f));
             Sprite iconSprite = FindSprite(art);
             if (iconSprite == null) iconSprite = Spr("lobby_avatar.png");
             Image iconImg = Img(icon.gameObject, iconSprite, artColor, false);
             iconImg.preserveAspect = true;
             RectTransform label = Node("Name", tile);
-            Place(label, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -296f), new Vector2(-24f, 46f));
+            Place(label, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -276f), new Vector2(-24f, 46f));
             Label(label.gameObject, name, 32, TextColor, TextAnchor.MiddleCenter);
             RectTransform d1 = Node("Desc1", tile);
-            Place(d1, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -344f), new Vector2(-18f, 32f));
+            Place(d1, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -324f), new Vector2(-18f, 32f));
             Label(d1.gameObject, line1, 24, HintColor, TextAnchor.MiddleCenter);
             RectTransform d2 = Node("Desc2", tile);
-            Place(d2, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -378f), new Vector2(-18f, 32f));
+            Place(d2, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -358f), new Vector2(-18f, 32f));
             Label(d2.gameObject, line2, 24, HintColor, TextAnchor.MiddleCenter);
             RectTransform price2 = Node("PriceValue", tile);
-            Place(price2, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(72f, -416f), new Vector2(150f, 44f));
+            Place(price2, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(72f, CardBottomPadding), new Vector2(150f, 44f));
             card.priceText = Label(price2.gameObject, price.ToString(), 34, TextColor, TextAnchor.MiddleLeft);
             RectTransform coin = Node("Coin", price2);
             Place(coin, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(32f, 32f));
             Img(coin.gameObject, Spr("lobby_ember.png"), new Color(1f, 0.76f, 0.3f, 1f), false);
             RectTransform state = Node("State", tile);
-            Place(state, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -416f), new Vector2(210f, 44f));
+            Place(state, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-28f, CardBottomPadding), new Vector2(210f, 44f));
             card.stateText = Label(state.gameObject, "Buy", 32, new Color(1f, 0.85f, 0.45f, 1f), TextAnchor.MiddleRight);
             cards.Add(card);
         }
@@ -255,6 +269,7 @@ namespace Palewick.EditorTools
         private static Button PlateButton(GameObject go, string sprite, string text, int size, UnityAction action)
         {
             Image img = Img(go, Spr(sprite), Color.white, true);
+            LobbyBuilder.Slice(img);
             Button b = go.AddComponent<Button>();
             b.targetGraphic = img;
             ColorBlock cb = b.colors;
@@ -265,8 +280,8 @@ namespace Palewick.EditorTools
             if (action != null) UnityEventTools.AddPersistentListener(b.onClick, action);
             if (string.IsNullOrEmpty(text)) return b;
             RectTransform lr = Stretch(Node("Label", go.transform));
-            lr.offsetMin = new Vector2(12f, 10f);
-            lr.offsetMax = new Vector2(-12f, -4f);
+            lr.offsetMin = new Vector2(32f, 12f);
+            lr.offsetMax = new Vector2(-32f, -8f);
             Label(lr.gameObject, text, size, TextColor, TextAnchor.MiddleCenter);
             return b;
         }

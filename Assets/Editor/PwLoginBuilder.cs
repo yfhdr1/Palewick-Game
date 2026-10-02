@@ -43,6 +43,7 @@ namespace Palewick.EditorTools
         }
         public static void Build(Transform root, LobbyManager lobby)
         {
+            LobbyBuilder.PrepareImports();
             font = AssetDatabase.LoadAssetAtPath<Font>(ArtFolder + "/Creepster.ttf");
             Kill(root, "LoginPanel");
             Kill(root, "PointsBadge");
@@ -82,7 +83,7 @@ namespace Palewick.EditorTools
         {
             RectTransform badge = Node("PointsBadge", root);
             Place(badge, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -186f), new Vector2(420f, 96f));
-            Img(badge.gameObject, Spr("lobby_nameplate.png"), Color.white, false);
+            LobbyBuilder.Slice(Img(badge.gameObject, Spr("lobby_nameplate.png"), Color.white, false));
             PwPointsHud hud = badge.gameObject.AddComponent<PwPointsHud>();
             RectTransform icon = Node("Icon", badge);
             Place(icon, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(66f, 0f), new Vector2(60f, 60f));
@@ -153,7 +154,7 @@ namespace Palewick.EditorTools
             mode.onlineNote = Label(note.gameObject, "No internet connection", 34, new Color(1f, 0.5f, 0.35f, 1f), TextAnchor.MiddleCenter);
             note.gameObject.SetActive(false);
             RectTransform close = Node("CloseButton", box);
-            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-12f, -12f), new Vector2(100f, 100f));
+            Place(close, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-16f, -16f), new Vector2(100f, 100f));
             mode.closeButton = RoundButton(close.gameObject, Spr("lobby_close.png"), mode.Close);
             shade.gameObject.SetActive(false);
         }
@@ -354,6 +355,7 @@ namespace Palewick.EditorTools
         private static Button PlateButton(GameObject go, string sprite, string text, int size, UnityAction action)
         {
             Image img = Img(go, Spr(sprite), Color.white, true);
+            LobbyBuilder.Slice(img);
             Button b = go.AddComponent<Button>();
             b.targetGraphic = img;
             ColorBlock cb = b.colors;
@@ -363,8 +365,8 @@ namespace Palewick.EditorTools
             b.colors = cb;
             if (action != null) UnityEventTools.AddPersistentListener(b.onClick, action);
             RectTransform lr = Stretch(Node("Label", go.transform));
-            lr.offsetMin = new Vector2(12f, 10f);
-            lr.offsetMax = new Vector2(-12f, -4f);
+            lr.offsetMin = new Vector2(32f, 12f);
+            lr.offsetMax = new Vector2(-32f, -8f);
             Label(lr.gameObject, text, size, TextColor, TextAnchor.MiddleCenter);
             return b;
         }

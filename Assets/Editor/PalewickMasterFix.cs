@@ -101,6 +101,13 @@ namespace Palewick.EditorTools
                         {
                             failures.Add("Scene_A touch controls");
                         }
+
+                        LightingRepairResult lighting = HorrorLightingTool.ApplyHorrorLighting(scene);
+                        report.AppendLine(lighting.ToString());
+                        if (!lighting.Succeeded)
+                        {
+                            failures.Add("Scene_A lighting");
+                        }
                     }
 
                     if (!EditorSceneManager.SaveScene(scene))

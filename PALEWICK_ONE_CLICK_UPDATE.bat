@@ -10,6 +10,7 @@ set "GIT_EXE="
 set "UNITY_EXE="
 set "UNITY_VERSION="
 set "GIT_TERMINAL_PROMPT=0"
+set "PHASE=%~1"
 
 echo.
 echo ================================================================
@@ -17,6 +18,26 @@ echo                 PALEWICK ONE-CLICK UPDATER
 echo ================================================================
 echo.
 
+if /i "%PHASE%"=="--finish" goto :PhaseFinish
+if /i "%PHASE%"=="--bootstrap" goto :PhaseBootstrap
+
+rem Phase 0 (double-click entry). CMD keeps reading a running BAT from its own
+rem file, so a Git update applied to the tracked copy mid-run can corrupt the
+rem execution. Stage a throwaway runner in TEMP and let it do the Git work.
+set "RUNNER_FILE=%TEMP%\Palewick_One_Click_Update_run.bat"
+copy /y "%SCRIPT_FILE%" "%RUNNER_FILE%" >nul
+if errorlevel 1 (
+    echo ERROR: Could not stage a runner copy in the TEMP folder.
+    goto :Failure
+)
+call "%RUNNER_FILE%" --bootstrap
+set "RUNNER_RC=%ERRORLEVEL%"
+del /q "%RUNNER_FILE%" >nul 2>&1
+exit /b %RUNNER_RC%
+
+:PhaseBootstrap
+rem The Git work below runs from the TEMP copy, so the pull can freely replace
+rem the tracked updater inside the project folder.
 call :FindProject
 if not defined PROJECT_DIR (
     echo ERROR: Could not find a Palewick-Game GitHub Desktop clone.
@@ -106,6 +127,28 @@ if errorlevel 1 (
 )
 echo GitHub update completed safely.
 echo.
+
+rem The tracked copy of this updater may have just been replaced by Git. Hand
+rem the remaining steps to that fresh copy so the newest logic always finishes
+rem the run (Unity version check, portable ZIP, Unity launch).
+set "TRACKED_BAT=%PROJECT_DIR%\PALEWICK_ONE_CLICK_UPDATE.bat"
+if not exist "%TRACKED_BAT%" (
+    echo ERROR: The tracked updater is missing from the project after the update:
+    echo   %TRACKED_BAT%
+    goto :Failure
+)
+call "%TRACKED_BAT%" --finish
+set "FINISH_RC=%ERRORLEVEL%"
+exit /b %FINISH_RC%
+
+:PhaseFinish
+rem Runs from the tracked copy after the pull. SCRIPT_DIR is the project root,
+rem so the discovery below resolves immediately.
+call :FindProject
+if not defined PROJECT_DIR (
+    echo ERROR: The Palewick-Game project could not be located after the update.
+    goto :Failure
+)
 
 set "PROJECT_VERSION_FILE=%PROJECT_DIR%\ProjectSettings\ProjectVersion.txt"
 if not exist "%PROJECT_VERSION_FILE%" (

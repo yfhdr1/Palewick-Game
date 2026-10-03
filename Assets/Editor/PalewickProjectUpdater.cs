@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -19,6 +20,7 @@ namespace Palewick.EditorTools
         private const string PendingFixKey = "Palewick.ProjectUpdater.PendingMasterFix";
         private const int GitTimeoutMilliseconds = 120000;
         private static bool pendingCheckScheduled;
+        private static string resolvedGitExecutable;
 
         [InitializeOnLoadMethod]
         private static void ResumeAfterScriptReload()
@@ -62,14 +64,21 @@ namespace Palewick.EditorTools
                 return;
             }
 
-            GitResult version = RunGit(projectRoot, "--version");
-            if (!version.Succeeded)
+            string gitExecutable = ResolveGitExecutable(projectRoot);
+            if (gitExecutable == null)
             {
-                ShowGitFailure("Git is not installed or cannot be started.", version);
+                EditorUtility.DisplayDialog(
+                    "Palewick Updater",
+                    "Git was not found on this PC. Install Git for Windows or GitHub Desktop, restart Unity, then press the update button again.",
+                    "OK");
+                Debug.LogError(
+                    "[Palewick Updater] Git was not found. Checked the PATH and the usual " +
+                    "Git for Windows / GitHub Desktop install folders.");
                 return;
             }
+            Debug.Log("[Palewick Updater] Using Git executable: " + gitExecutable);
 
-            GitResult status = RunGit(projectRoot, "status --porcelain --untracked-files=no");
+            GitResult status = RunGit(gitExecutable, projectRoot, "status --porcelain --untracked-files=no");
             if (!status.Succeeded)
             {
                 ShowGitFailure("Could not inspect the project before updating.", status);
@@ -84,7 +93,7 @@ namespace Palewick.EditorTools
                 return;
             }
 
-            GitResult branchResult = RunGit(projectRoot, "rev-parse --abbrev-ref HEAD");
+            GitResult branchResult = RunGit(gitExecutable, projectRoot, "rev-parse --abbrev-ref HEAD");
             string branch = branchResult.output.Trim();
             if (!branchResult.Succeeded || string.IsNullOrEmpty(branch) || branch == "HEAD")
             {
@@ -92,7 +101,7 @@ namespace Palewick.EditorTools
                 return;
             }
 
-            GitResult beforeResult = RunGit(projectRoot, "rev-parse --short HEAD");
+            GitResult beforeResult = RunGit(gitExecutable, projectRoot, "rev-parse --short HEAD");
             string before = beforeResult.Succeeded ? beforeResult.output.Trim() : "unknown";
 
             try
@@ -102,7 +111,7 @@ namespace Palewick.EditorTools
                     "Downloading all updates from origin/" + branch + "...",
                     0.35f);
 
-                GitResult fetch = RunGit(projectRoot, "fetch --prune origin");
+                GitResult fetch = RunGit(gitExecutable, projectRoot, "fetch --prune origin");
                 if (!fetch.Succeeded)
                 {
                     ShowGitFailure("Could not download updates from GitHub.", fetch);
@@ -114,7 +123,7 @@ namespace Palewick.EditorTools
                     "Applying code, images, scenes and project files...",
                     0.7f);
 
-                GitResult pull = RunGit(projectRoot, "pull --ff-only origin " + QuoteArgument(branch));
+                GitResult pull = RunGit(gitExecutable, projectRoot, "pull --ff-only origin " + QuoteArgument(branch));
                 if (!pull.Succeeded)
                 {
                     ShowGitFailure(
@@ -123,7 +132,7 @@ namespace Palewick.EditorTools
                     return;
                 }
 
-                GitResult afterResult = RunGit(projectRoot, "rev-parse --short HEAD");
+                GitResult afterResult = RunGit(gitExecutable, projectRoot, "rev-parse --short HEAD");
                 string after = afterResult.Succeeded ? afterResult.output.Trim() : "unknown";
 
                 SessionState.SetBool(PendingFixKey, true);
@@ -179,14 +188,72 @@ namespace Palewick.EditorTools
             PalewickMasterFix.FixEverything();
         }
 
-        private static GitResult RunGit(string workingDirectory, string arguments)
+        private static string ResolveGitExecutable(string workingDirectory)
+        {
+            if (!string.IsNullOrEmpty(resolvedGitExecutable))
+            {
+                return resolvedGitExecutable;
+            }
+
+            List<string> candidates = new List<string> { "git" };
+            if (Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                string programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
+                string programFilesX86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
+                string localAppData = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+                if (!string.IsNullOrEmpty(programFiles))
+                {
+                    candidates.Add(Path.Combine(programFiles, @"Git\cmd\git.exe"));
+                }
+                if (!string.IsNullOrEmpty(programFilesX86))
+                {
+                    candidates.Add(Path.Combine(programFilesX86, @"Git\cmd\git.exe"));
+                }
+                if (!string.IsNullOrEmpty(localAppData))
+                {
+                    candidates.Add(Path.Combine(localAppData, @"Programs\Git\cmd\git.exe"));
+
+                    string desktopRoot = Path.Combine(localAppData, "GitHubDesktop");
+                    if (Directory.Exists(desktopRoot))
+                    {
+                        // Newest app folder first so an updated GitHub Desktop wins.
+                        List<string> appFolders = new List<string>(Directory.GetDirectories(desktopRoot, "app-*"));
+                        appFolders.Sort(StringComparer.OrdinalIgnoreCase);
+                        for (int i = appFolders.Count - 1; i >= 0; i--)
+                        {
+                            string bundledGitRoot = Path.Combine(appFolders[i], @"resources\app\git");
+                            candidates.Add(Path.Combine(bundledGitRoot, @"cmd\git.exe"));
+                            candidates.Add(Path.Combine(bundledGitRoot, @"mingw64\bin\git.exe"));
+                        }
+                    }
+                }
+            }
+
+            foreach (string candidate in candidates)
+            {
+                if (candidate != "git" && !File.Exists(candidate))
+                {
+                    continue;
+                }
+                GitResult probe = RunGit(candidate, workingDirectory, "--version");
+                if (probe.Succeeded)
+                {
+                    resolvedGitExecutable = candidate;
+                    return resolvedGitExecutable;
+                }
+            }
+
+            return null;
+        }
+
+        private static GitResult RunGit(string gitExecutable, string workingDirectory, string arguments)
         {
             GitResult result = new GitResult { exitCode = -1 };
             try
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
-                    FileName = "git",
+                    FileName = gitExecutable,
                     Arguments = arguments,
                     WorkingDirectory = workingDirectory,
                     UseShellExecute = false,
@@ -197,6 +264,7 @@ namespace Palewick.EditorTools
                     StandardErrorEncoding = Encoding.UTF8
                 };
                 startInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
+                startInfo.EnvironmentVariables["GCM_INTERACTIVE"] = "never";
 
                 using (Process process = new Process { StartInfo = startInfo })
                 {

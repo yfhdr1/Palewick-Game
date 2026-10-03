@@ -50,7 +50,7 @@ rem Ask only the Unity instance that opened this project to close. No process is
 set "PALEWICK_PROJECT_DIR=%PROJECT_DIR%"
 set "UNITY_STILL_RUNNING="
 echo Checking whether this project is open in Unity...
-for /f "usebackq delims=" %%L in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$project = (Resolve-Path -LiteralPath $env:PALEWICK_PROJECT_DIR).Path; $ids = @(Get-CimInstance Win32_Process -Filter 'Name=''Unity.exe''' ^| Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($project, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 } ^| Select-Object -ExpandProperty ProcessId); foreach ($id in $ids) { try { $null = [System.Diagnostics.Process]::GetProcessById([int]$id).CloseMainWindow() } catch {} }; if ($ids.Count -gt 0) { Write-Output 'UNITY_CLOSE_REQUESTED'; $deadline = (Get-Date).AddMinutes(3); do { Start-Sleep -Seconds 2; $remaining = @($ids ^| Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }) } while ($remaining.Count -gt 0 -and (Get-Date) -lt $deadline); if ($remaining.Count -gt 0) { Write-Output 'UNITY_STILL_RUNNING' } else { Write-Output 'UNITY_CLOSED' } } else { Write-Output 'UNITY_NOT_RUNNING' }"`) do (
+for /f "usebackq delims=" %%L in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$project = (Resolve-Path -LiteralPath $env:PALEWICK_PROJECT_DIR).Path; $ids = [System.Collections.Generic.List[int]]::new(); $processes = Get-CimInstance Win32_Process -Filter 'Name=''Unity.exe'''; foreach ($process in $processes) { if ($process.CommandLine -and $process.CommandLine.IndexOf($project, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) { $ids.Add([int]$process.ProcessId) } }; foreach ($id in $ids) { try { $null = [System.Diagnostics.Process]::GetProcessById($id).CloseMainWindow() } catch {} }; if ($ids.Count -gt 0) { Write-Output 'UNITY_CLOSE_REQUESTED'; $deadline = (Get-Date).AddMinutes(3); do { Start-Sleep -Seconds 2; $remaining = [System.Collections.Generic.List[int]]::new(); foreach ($id in $ids) { if (Get-Process -Id $id -ErrorAction SilentlyContinue) { $remaining.Add($id) } } } while ($remaining.Count -gt 0 -and (Get-Date) -lt $deadline); if ($remaining.Count -gt 0) { Write-Output 'UNITY_STILL_RUNNING' } else { Write-Output 'UNITY_CLOSED' } } else { Write-Output 'UNITY_NOT_RUNNING' }"`) do (
     if "%%L"=="UNITY_CLOSE_REQUESTED" echo Requested a normal Unity close. Save any Unity prompt if one appears.
     if "%%L"=="UNITY_CLOSED" echo Unity closed normally.
     if "%%L"=="UNITY_NOT_RUNNING" echo This project is not open in Unity.
@@ -149,29 +149,45 @@ echo Unity will run the Palewick repair after it opens the project.
 goto :Success
 
 :FindProject
-rem Prefer the project next to this BAT file.
-if exist "%SCRIPT_DIR%ProjectSettings\ProjectVersion.txt" if exist "%SCRIPT_DIR%.git" set "PROJECT_DIR=%SCRIPT_DIR:~0,-1%"
-if defined PROJECT_DIR exit /b 0
+rem Use plain CMD path checks so Desktop launches never depend on PowerShell pipelines.
+call :UseProjectIfValid "%SCRIPT_DIR%"
+call :UseProjectIfValid "%USERPROFILE%\Documents\GitHub\Palewick-Game"
+call :UseProjectIfValid "%USERPROFILE%\OneDrive\Documents\GitHub\Palewick-Game"
+call :UseProjectIfValid "%USERPROFILE%\GitHub\Palewick-Game"
+call :UseProjectIfValid "%USERPROFILE%\source\repos\Palewick-Game"
+call :UseProjectIfValid "%USERPROFILE%\Desktop\Palewick-Game"
+call :UseProjectIfValid "%USERPROFILE%\Desktop\yarekam"
+exit /b 0
 
-rem GitHub Desktop normally clones into Documents\GitHub. Search common clone roots as a fallback.
-for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$roots = @((Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'GitHub'), (Join-Path $env:USERPROFILE 'Documents\GitHub'), (Join-Path $env:USERPROFILE 'GitHub'), (Join-Path $env:USERPROFILE 'source\repos')); foreach ($root in ($roots ^| Select-Object -Unique)) { if ($root -and (Test-Path -LiteralPath $root)) { $candidate = Join-Path $root 'Palewick-Game'; if ((Test-Path -LiteralPath (Join-Path $candidate 'ProjectSettings\ProjectVersion.txt')) -and (Test-Path -LiteralPath (Join-Path $candidate '.git'))) { (Resolve-Path -LiteralPath $candidate).Path; break } } }"`) do if not defined PROJECT_DIR set "PROJECT_DIR=%%P"
+:UseProjectIfValid
+if defined PROJECT_DIR exit /b 0
+set "PROJECT_CANDIDATE=%~f1"
+if exist "%PROJECT_CANDIDATE%\ProjectSettings\ProjectVersion.txt" if exist "%PROJECT_CANDIDATE%\.git" set "PROJECT_DIR=%PROJECT_CANDIDATE%"
+set "PROJECT_CANDIDATE="
 exit /b 0
 
 :FindGit
-for /f "usebackq delims=" %%G in (`where.exe git.exe 2^>nul`) do if not defined GIT_EXE set "GIT_EXE=%%G"
+for /f "delims=" %%G in ('where.exe git.exe 2^>nul') do if not defined GIT_EXE set "GIT_EXE=%%G"
 if defined GIT_EXE exit /b 0
-
-for /f "usebackq delims=" %%G in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$candidates = @((Join-Path $env:ProgramFiles 'Git\cmd\git.exe'), (Join-Path ${env:ProgramFiles(x86)} 'Git\cmd\git.exe')); $desktopRoot = Join-Path $env:LOCALAPPDATA 'GitHubDesktop'; if (Test-Path -LiteralPath $desktopRoot) { $candidates += Get-ChildItem -LiteralPath $desktopRoot -Directory -Filter 'app-*' -ErrorAction SilentlyContinue ^| ForEach-Object { Join-Path $_.FullName 'resources\app\git\cmd\git.exe' } }; foreach ($candidate in $candidates) { if ($candidate -and (Test-Path -LiteralPath $candidate)) { (Resolve-Path -LiteralPath $candidate).Path; break } }"`) do if not defined GIT_EXE set "GIT_EXE=%%G"
+if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%LOCALAPPDATA%\Programs\Git\cmd\git.exe" set "GIT_EXE=%LOCALAPPDATA%\Programs\Git\cmd\git.exe"
+if not defined GIT_EXE for /d %%D in ("%LOCALAPPDATA%\GitHubDesktop\app-*") do if exist "%%~fD\resources\app\git\cmd\git.exe" set "GIT_EXE=%%~fD\resources\app\git\cmd\git.exe"
+if not defined GIT_EXE for /d %%D in ("%LOCALAPPDATA%\GitHubDesktop\app-*") do if exist "%%~fD\resources\app\git\mingw64\bin\git.exe" set "GIT_EXE=%%~fD\resources\app\git\mingw64\bin\git.exe"
 exit /b 0
 
 :FindUnity
-set "PALEWICK_UNITY_VERSION=%UNITY_VERSION%"
-for /f "usebackq delims=" %%U in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$version = $env:PALEWICK_UNITY_VERSION; $roots = @((Join-Path $env:ProgramFiles 'Unity\Hub\Editor'), (Join-Path ${env:ProgramFiles(x86)} 'Unity\Hub\Editor'), (Join-Path $env:LOCALAPPDATA 'Unity\Hub\Editor'), (Join-Path $env:USERPROFILE 'AppData\Local\Programs\Unity\Hub\Editor')); foreach ($root in $roots) { if ($root) { $candidate = Join-Path $root ($version + '\Editor\Unity.exe'); if (Test-Path -LiteralPath $candidate) { (Resolve-Path -LiteralPath $candidate).Path; exit 0 } } }; $onPath = Get-Command Unity.exe -ErrorAction SilentlyContinue; if ($onPath) { $onPath.Source; exit 0 }; exit 1"`) do if not defined UNITY_EXE set "UNITY_EXE=%%U"
+if exist "%ProgramFiles%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe" set "UNITY_EXE=%ProgramFiles%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe"
+if not defined UNITY_EXE if exist "%ProgramFiles(x86)%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe" set "UNITY_EXE=%ProgramFiles(x86)%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe"
+if not defined UNITY_EXE if exist "%LOCALAPPDATA%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe" set "UNITY_EXE=%LOCALAPPDATA%\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe"
+if not defined UNITY_EXE if exist "%LOCALAPPDATA%\Programs\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe" set "UNITY_EXE=%LOCALAPPDATA%\Programs\Unity\Hub\Editor\%UNITY_VERSION%\Editor\Unity.exe"
+if not defined UNITY_EXE for /f "delims=" %%U in ('where.exe Unity.exe 2^>nul') do if not defined UNITY_EXE set "UNITY_EXE=%%U"
 exit /b 0
 
 :CreateZip
-set "PALEWICK_BAT_FILE=%SCRIPT_FILE%"
+set "PALEWICK_BAT_FILE=%PROJECT_DIR%\PALEWICK_ONE_CLICK_UPDATE.bat"
 set "PALEWICK_ZIP_FILE=%PROJECT_DIR%\Palewick_One_Click_Updater.zip"
+if not exist "%PALEWICK_BAT_FILE%" exit /b 1
 echo Verifying the portable updater ZIP...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$bat = $env:PALEWICK_BAT_FILE; $zip = $env:PALEWICK_ZIP_FILE; $rebuild = $true; if (Test-Path -LiteralPath $zip) { try { Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive = [System.IO.Compression.ZipFile]::OpenRead($zip); try { $entry = $archive.GetEntry([System.IO.Path]::GetFileName($bat)); if ($entry) { $reader = New-Object System.IO.StreamReader($entry.Open()); try { $inside = $reader.ReadToEnd() } finally { $reader.Dispose() }; $outside = [System.IO.File]::ReadAllText($bat); if ($inside.Equals($outside, [System.StringComparison]::Ordinal)) { $rebuild = $false } } } finally { $archive.Dispose() } } catch { $rebuild = $true } }; if ($rebuild) { if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }; Compress-Archive -LiteralPath $bat -DestinationPath $zip -CompressionLevel Optimal -Force }; if (-not (Test-Path -LiteralPath $zip)) { exit 1 }"
 exit /b %ERRORLEVEL%

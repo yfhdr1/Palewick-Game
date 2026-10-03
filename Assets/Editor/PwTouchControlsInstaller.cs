@@ -301,6 +301,7 @@ namespace Palewick.EditorTools
                             Vector2.zero,
                             new Vector2(320f, 320f));
                     }
+                    StyleHorrorJoystick(instance);
                     return instance.GetComponent<Joystick>();
                 }
             }
@@ -319,7 +320,10 @@ namespace Palewick.EditorTools
                 new Vector2(320f, 320f));
             Image backgroundImage = background.gameObject.AddComponent<Image>();
             backgroundImage.sprite = uiSprite;
-            backgroundImage.color = new Color(1f, 1f, 1f, 0.28f);
+            backgroundImage.color = new Color(0.16f, 0.025f, 0.035f, 0.72f);
+            Outline backgroundOutline = background.gameObject.AddComponent<Outline>();
+            backgroundOutline.effectColor = new Color(0.52f, 0.045f, 0.06f, 0.9f);
+            backgroundOutline.effectDistance = new Vector2(4f, -4f);
 
             RectTransform handle = CreateRect("Handle", background);
             Place(
@@ -331,7 +335,10 @@ namespace Palewick.EditorTools
                 new Vector2(120f, 120f));
             Image handleImage = handle.gameObject.AddComponent<Image>();
             handleImage.sprite = knobSprite;
-            handleImage.color = new Color(1f, 1f, 1f, 0.75f);
+            handleImage.color = new Color(0.86f, 0.78f, 0.7f, 0.92f);
+            Outline handleOutline = handle.gameObject.AddComponent<Outline>();
+            handleOutline.effectColor = new Color(0.42f, 0.025f, 0.035f, 0.95f);
+            handleOutline.effectDistance = new Vector2(3f, -3f);
 
             FixedJoystick joystick = background.gameObject.AddComponent<FixedJoystick>();
             SerializedObject serialized = new SerializedObject(joystick);
@@ -347,6 +354,27 @@ namespace Palewick.EditorTools
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return joystick;
+        }
+
+        private static void StyleHorrorJoystick(GameObject joystickObject)
+        {
+            Image[] images = joystickObject.GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image image = images[i];
+                if (image == null) continue;
+                bool handle = image.transform.name.IndexOf("Handle", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                image.color = handle
+                    ? new Color(0.86f, 0.78f, 0.7f, 0.92f)
+                    : new Color(0.16f, 0.025f, 0.035f, 0.72f);
+                image.preserveAspect = true;
+                Outline outline = image.GetComponent<Outline>();
+                if (outline == null) outline = image.gameObject.AddComponent<Outline>();
+                outline.effectColor = handle
+                    ? new Color(0.42f, 0.025f, 0.035f, 0.95f)
+                    : new Color(0.52f, 0.045f, 0.06f, 0.9f);
+                outline.effectDistance = handle ? new Vector2(3f, -3f) : new Vector2(4f, -4f);
+            }
         }
 
         private static PwTouchButton CreateActionButton(
@@ -367,42 +395,40 @@ namespace Palewick.EditorTools
                 position,
                 new Vector2(size, size));
 
-            Sprite ring = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Sprite horrorSprite = AssetDatabase.LoadAssetAtPath<Sprite>(IconFolder + "/" + iconFile);
             Image background = rect.gameObject.AddComponent<Image>();
-            background.sprite = ring;
-            background.type = Image.Type.Sliced;
-            background.color = new Color(0.08f, 0.08f, 0.08f, 0.58f);
+            background.sprite = horrorSprite;
+            background.type = Image.Type.Simple;
+            background.color = Color.white;
+            background.preserveAspect = true;
             background.raycastTarget = true;
 
-            RectTransform iconRect = CreateRect("Icon", rect);
-            Place(
-                iconRect,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                Vector2.zero,
-                new Vector2(size * 0.62f, size * 0.62f));
-            Image icon = iconRect.gameObject.AddComponent<Image>();
-            icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(IconFolder + "/" + iconFile);
-            icon.color = new Color(1f, 1f, 1f, 0.86f);
-            icon.preserveAspect = true;
-            icon.raycastTarget = false;
+            Shadow shadow = rect.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            shadow.effectDistance = new Vector2(7f, -7f);
+            Outline outline = rect.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.48f, 0.02f, 0.035f, 0.8f);
+            outline.effectDistance = new Vector2(2f, -2f);
 
-            if (icon.sprite == null)
+            if (horrorSprite == null)
             {
-                Text label = iconRect.gameObject.AddComponent<Text>();
+                background.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+                background.color = new Color(0.16f, 0.025f, 0.035f, 0.94f);
+                RectTransform labelRect = CreateRect("Label", rect);
+                Stretch(labelRect);
+                Text label = labelRect.gameObject.AddComponent<Text>();
                 label.text = fallbackLabel;
                 label.alignment = TextAnchor.MiddleCenter;
-                label.color = Color.white;
+                label.color = new Color(0.9f, 0.84f, 0.78f, 1f);
                 label.fontSize = Mathf.Max(16, Mathf.RoundToInt(size * 0.2f));
                 label.raycastTarget = false;
-                label.font = AssetDatabase.GetBuiltinExtraResource<Font>("Arial.ttf");
+                label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
 
             PwTouchButton button = rect.gameObject.AddComponent<PwTouchButton>();
             button.action = action;
             button.background = background;
-            button.icon = icon;
+            button.icon = background;
             return button;
         }
 

@@ -130,7 +130,14 @@ namespace Palewick.EditorTools
                 rebound += SetTexture(material, "_EmissionMap", binding.emission, binding.scale, binding.offset);
             }
 
-            RestoreColor(material, binding.color);
+            Color restoredColor = IsArchitectureMaterial(material.name) ? Color.white : binding.color;
+            RestoreColor(material, restoredColor);
+            if (IsArchitectureMaterial(material.name))
+            {
+                if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+                if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0.28f);
+                if (material.HasProperty("_OcclusionStrength")) material.SetFloat("_OcclusionStrength", 1f);
+            }
             RestoreKeywords(material, binding);
 
             // Keyword cleanup and color restoration may also change serialized state.
@@ -269,6 +276,11 @@ namespace Palewick.EditorTools
             material.SetTextureScale(property, scale);
             material.SetTextureOffset(property, offset);
             return changed ? 1 : 0;
+        }
+
+        private static bool IsArchitectureMaterial(string materialName)
+        {
+            return materialName.StartsWith("BLD_", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void RestoreColor(Material material, Color color)

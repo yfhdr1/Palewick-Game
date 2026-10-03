@@ -54,8 +54,29 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     private Sprite generatedDot;
     private CharController_Motor localMotor;
     private GameObject loadingPanel;
+    private readonly List<HudVisibilityState> hiddenGameplayHud = new List<HudVisibilityState>();
     private float nextRender;
     private float nextSearch;
+    private static readonly string[] GameplayControlNames =
+    {
+        "PwTouchControls",
+        "TouchControls",
+        "Fixed Joystick",
+        "Floating Joystick",
+        "Dynamic Joystick",
+        "Variable Joystick",
+        "MoveJoystick",
+        "JumpBtn",
+        "JumpButton",
+        "SprintBtn",
+        "AutoRunBtn",
+        "AutoRunButton",
+        "InteractBtn",
+        "InteractButton",
+        "ViewSwitchBtn",
+        "FlashlightBtn",
+        "CrouchBtn"
+    };
     private void Start()
     {
         if (mapImage == null)
@@ -115,8 +136,13 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
             loadingPanel = lp != null ? lp.gameObject : null;
         }
     }
+    private void OnDisable()
+    {
+        RestoreGameplayHud();
+    }
     private void OnDestroy()
     {
+        RestoreGameplayHud();
         if (closeMapButton != null) closeMapButton.onClick.RemoveListener(CloseFullMap);
         if (zoomInButton != null) zoomInButton.onClick.RemoveListener(ZoomInFullMap);
         if (zoomOutButton != null) zoomOutButton.onClick.RemoveListener(ZoomOutFullMap);
@@ -204,6 +230,7 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
         if (!hasWorldBounds) CalculateWorldBounds();
         Search();
         fullMapOpen = true;
+        HideGameplayHud();
         fullMapPanel.SetActive(true);
         float maxExtent = Mathf.Max(worldBounds.extents.x, worldBounds.extents.z);
         float fullCoverage = Mathf.Max(maxExtent * 1.1f, Mathf.Max(worldBounds.size.x, worldBounds.size.z) * 0.55f);
@@ -219,6 +246,75 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     {
         fullMapOpen = false;
         if (fullMapPanel != null) fullMapPanel.SetActive(false);
+        RestoreGameplayHud();
+    }
+    private void HideGameplayHud()
+    {
+        RestoreGameplayHud();
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return;
+
+        Transform root = canvas.rootCanvas != null ? canvas.rootCanvas.transform : canvas.transform;
+        List<GameObject> targets = new List<GameObject>();
+        PwTouchControls[] touchControls = root.GetComponentsInChildren<PwTouchControls>(true);
+        for (int i = 0; i < touchControls.Length; i++)
+        {
+            AddHudTarget(targets, touchControls[i] != null ? touchControls[i].gameObject : null);
+        }
+        Joystick[] joysticks = root.GetComponentsInChildren<Joystick>(true);
+        for (int i = 0; i < joysticks.Length; i++)
+        {
+            AddHudTarget(targets, joysticks[i] != null ? joysticks[i].gameObject : null);
+        }
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform candidate = transforms[i];
+            if (candidate != null && IsGameplayControlName(candidate.name))
+            {
+                AddHudTarget(targets, candidate.gameObject);
+            }
+        }
+        for (int i = 0; i < targets.Count; i++)
+        {
+            GameObject target = targets[i];
+            if (target == null || target == fullMapPanel || target.transform.IsChildOf(fullMapPanel.transform)) continue;
+            hiddenGameplayHud.Add(new HudVisibilityState(target, target.activeSelf));
+            target.SetActive(false);
+        }
+    }
+    private void RestoreGameplayHud()
+    {
+        for (int i = hiddenGameplayHud.Count - 1; i >= 0; i--)
+        {
+            HudVisibilityState state = hiddenGameplayHud[i];
+            if (state.target != null) state.target.SetActive(state.wasActive);
+        }
+        hiddenGameplayHud.Clear();
+    }
+    private static void AddHudTarget(List<GameObject> targets, GameObject candidate)
+    {
+        if (candidate == null) return;
+        for (int i = targets.Count - 1; i >= 0; i--)
+        {
+            GameObject existing = targets[i];
+            if (existing == null)
+            {
+                targets.RemoveAt(i);
+                continue;
+            }
+            if (candidate.transform.IsChildOf(existing.transform)) return;
+            if (existing.transform.IsChildOf(candidate.transform)) targets.RemoveAt(i);
+        }
+        targets.Add(candidate);
+    }
+    private static bool IsGameplayControlName(string objectName)
+    {
+        for (int i = 0; i < GameplayControlNames.Length; i++)
+        {
+            if (objectName == GameplayControlNames[i]) return true;
+        }
+        return false;
     }
     private void SetFullMapZoom(float value)
     {
@@ -679,6 +775,16 @@ public class Minimap : MonoBehaviour, IPointerClickHandler
     private static bool InArrow(Vector2 p, Vector2 tip, Vector2 left, Vector2 notch, Vector2 right)
     {
         return InTriangle(p, tip, left, notch) || InTriangle(p, tip, notch, right);
+    }
+    private struct HudVisibilityState
+    {
+        public readonly GameObject target;
+        public readonly bool wasActive;
+        public HudVisibilityState(GameObject target, bool wasActive)
+        {
+            this.target = target;
+            this.wasActive = wasActive;
+        }
     }
     private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
     {
